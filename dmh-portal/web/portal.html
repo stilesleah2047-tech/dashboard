@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Client Portal — Digital Media Hawkers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0C1222; --ink-2:#17203A; --canvas:#F4F6FB; --surface:#fff;
+  --line:#E2E7F0; --line-soft:#EFF2F8; --muted:#69728A; --muted-2:#98A1B5;
+  --blue:#2C5CF6; --violet:#7A5AF8; --amber:#FF8A3D; --teal:#0E9F8E; --rose:#E2447B;
+  --radius:14px; --radius-sm:9px;
+  --shadow:0 1px 2px rgba(12,18,34,.04), 0 8px 24px -12px rgba(12,18,34,.14);
+  --display:'Space Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --body:'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--canvas); color:var(--ink); font-family:var(--body); font-size:14px;
+  line-height:1.5; -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums}
+button,input,select{font-family:inherit; font-size:inherit; color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue); outline-offset:2px; border-radius:4px}
+[hidden]{display:none !important}
+
+/* ---------- top bar ---------- */
+.topbar{background:var(--ink); color:#fff; padding:14px 24px; display:flex;
+  align-items:center; gap:18px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:11px}
+.brand .mark{width:30px; height:30px; font-size:13px}
+.brand-name{font-family:var(--display); font-weight:600; letter-spacing:-.015em; font-size:15px}
+.brand-sub{font-size:11px; color:#8E97AE; letter-spacing:.06em; text-transform:uppercase}
+.client-tag{display:flex; align-items:center; gap:9px; padding:6px 13px; border-radius:99px;
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); font-size:13px}
+.client-tag b{font-family:var(--display); font-weight:600}
+.client-tag span{color:#8E97AE}
+.client-tag select{background:transparent; border:none; color:#fff; font-family:var(--display);
+  font-weight:600; padding:0; cursor:pointer}
+.client-tag select option{color:var(--ink)}
+.topbar-right{margin-left:auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.who{font-size:12px; color:#8E97AE; display:flex; align-items:center; gap:7px}
+.dot{width:7px; height:7px; border-radius:50%; background:#35D6A4; box-shadow:0 0 0 3px rgba(53,214,164,.18)}
+.btn{background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.16); color:#fff;
+  padding:7px 14px; border-radius:8px; font-size:13px; font-weight:500; transition:background .15s}
+.btn:hover{background:rgba(255,255,255,.17)}
+.demo-strip{background:#FFF6E9; border-bottom:1px solid #F6E2C4; color:#8A5A16;
+  font-size:12.5px; padding:8px 24px; text-align:center}
+.demo-strip b{font-family:var(--display)}
+
+/* ---------- live indicator ---------- */
+.live{display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.09);
+  border:1px solid rgba(255,255,255,.16); color:#fff; padding:7px 13px; border-radius:99px;
+  font-size:12.5px; font-weight:500}
+.live:hover{background:rgba(255,255,255,.17)}
+.live .dot{background:#35D6A4; box-shadow:0 0 0 3px rgba(53,214,164,.18); transition:background .2s, box-shadow .2s}
+.live.busy .dot{background:#FFC24B; box-shadow:0 0 0 3px rgba(255,194,75,.2); animation:pulse 1s ease-in-out infinite}
+.live.stale .dot{background:#FF7A7A; box-shadow:0 0 0 3px rgba(255,122,122,.18)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.who{font-size:12px; color:#8E97AE}
+
+/* ---------- campaign status ---------- */
+.badge{display:inline-block; margin-left:8px; padding:1px 7px; border-radius:99px; font-size:10.5px;
+  font-weight:600; letter-spacing:.03em; vertical-align:1px}
+.badge.live{background:#E4F8F1; color:#0B7A65; border:1px solid #BFEBDF; display:inline-block}
+.badge.ended{background:#F1F3F8; color:#69728A; border:1px solid #E2E7F0}
+.badge.soon{background:#FFF4E6; color:#9A5B12; border:1px solid #F7E0C0}
+.err-bar{background:#FEF2F4; color:#B4243F; border:1px solid #F9D4DC; border-radius:var(--radius);
+  padding:11px 16px; font-size:13px; margin-bottom:16px; display:flex; gap:10px; align-items:center}
+.err-bar button{margin-left:auto; background:#fff; border:1px solid #F1C3CE; color:#B4243F;
+  border-radius:7px; padding:5px 11px; font-size:12.5px}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1440px; margin:0 auto; padding:20px 24px 56px}
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); margin-bottom:18px}
+.panel-head{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:16px 20px;
+  border-bottom:1px solid var(--line-soft)}
+.panel-title{font-family:var(--display); font-weight:600; font-size:15px; letter-spacing:-.01em; margin:0}
+.panel-note{font-size:12px; color:var(--muted)}
+.spacer{margin-left:auto}
+
+/* ---------- filters ---------- */
+.filters{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; padding:16px 20px}
+.field{display:flex; flex-direction:column; gap:6px; min-width:0}
+.field > label{font-size:10.5px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted-2)}
+.control{height:36px; padding:0 12px; border:1px solid var(--line); background:#fff;
+  border-radius:var(--radius-sm); display:flex; align-items:center; gap:8px; font-size:13.5px}
+.control:hover{border-color:#CBD3E2}
+input.control{padding:0 10px}
+.ms{position:relative}
+.ms-toggle{min-width:250px; justify-content:space-between; text-align:left; color:var(--ink)}
+.ms-toggle .caret{color:var(--muted-2); font-size:10px}
+.ms-panel{position:absolute; z-index:40; top:calc(100% + 6px); left:0; width:340px; max-height:320px;
+  overflow:auto; background:#fff; border:1px solid var(--line); border-radius:var(--radius-sm);
+  box-shadow:0 12px 34px -10px rgba(12,18,34,.28); padding:6px; display:none}
+.ms-panel.open{display:block}
+.ms-actions{display:flex; gap:6px; padding:6px 6px 8px; border-bottom:1px solid var(--line-soft); margin-bottom:4px}
+.link-btn{background:none; border:none; color:var(--blue); font-size:12px; font-weight:600; padding:2px 4px}
+.ms-item{display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:7px; cursor:pointer; font-size:13px}
+.ms-item:hover{background:var(--canvas)}
+.ms-item input{accent-color:var(--blue); width:15px; height:15px; flex:none}
+.ms-item .cid{margin-left:auto; color:var(--muted-2); font-size:11.5px}
+.presets{display:flex; border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; height:36px}
+.preset{background:#fff; border:none; border-right:1px solid var(--line); padding:0 13px;
+  font-size:12.5px; color:var(--muted); font-weight:500}
+.preset:last-child{border-right:none}
+.preset:hover{background:var(--canvas); color:var(--ink)}
+.preset.active{background:var(--ink); color:#fff}
+.btn-run{height:36px; background:var(--blue); color:#fff; border:1px solid var(--blue);
+  padding:0 20px; border-radius:var(--radius-sm); font-weight:600; font-size:13.5px}
+.btn-run:hover{background:#1F49D6}
+.btn-ghost{height:36px; background:#fff; border:1px solid var(--line); color:var(--ink);
+  padding:0 14px; border-radius:var(--radius-sm); font-weight:500; font-size:13.5px}
+.btn-ghost:hover{border-color:#CBD3E2; background:var(--canvas)}
+
+/* ---------- pacing ---------- */
+.pacing{display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:12px 20px;
+  border-top:1px solid var(--line-soft); background:#FBFCFE; border-radius:0 0 var(--radius) var(--radius)}
+.pace-label{font-size:12px; color:var(--muted); white-space:nowrap}
+.pace-label b{color:var(--ink); font-family:var(--display); font-weight:600}
+.pace-bar{flex:1 1 220px; height:7px; border-radius:99px; background:#E7EBF4; overflow:hidden; min-width:160px}
+.pace-fill{height:100%; border-radius:99px; background:linear-gradient(90deg,var(--blue),var(--violet))}
+
+/* ---------- table ---------- */
+.table-scroll{overflow-x:auto}
+table{border-collapse:collapse; width:100%; min-width:1080px; font-size:13px}
+thead th{position:sticky; top:0; z-index:2; background:var(--ink-2); color:#fff;
+  font-family:var(--display); font-weight:500; font-size:12px; padding:11px 14px; text-align:right;
+  white-space:nowrap; cursor:pointer; user-select:none}
+thead th:first-child, thead th:nth-child(2){text-align:left}
+thead th:hover{background:#212C4C}
+thead th .arrow{opacity:.35; margin-left:5px; font-size:9px}
+thead th.sorted .arrow{opacity:1}
+tbody td{padding:11px 14px; text-align:right; border-bottom:1px solid var(--line-soft); white-space:nowrap}
+tbody td:first-child, tbody td:nth-child(2){text-align:left}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#F7F9FD}
+tbody tr.picked{background:#EEF2FE}
+tbody tr.picked td:first-child{box-shadow:inset 3px 0 0 var(--blue)}
+.cname{color:var(--blue); font-weight:500}
+.cid-cell{color:var(--muted); font-size:12.5px}
+tfoot td{padding:12px 14px; text-align:right; font-weight:600; font-family:var(--display);
+  background:#F7F9FD; border-top:2px solid var(--line); white-space:nowrap}
+tfoot td:first-child{text-align:left}
+.zero{color:var(--muted-2)}
+.empty{padding:44px 20px; text-align:center; color:var(--muted)}
+.empty b{display:block; font-family:var(--display); color:var(--ink); margin-bottom:4px}
+
+/* ---------- cards ---------- */
+.cards{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; padding:16px 20px 4px}
+.card{position:relative; text-align:left; background:#fff; border:1px solid var(--line);
+  border-radius:var(--radius-sm); padding:12px 13px 8px; overflow:hidden; transition:border-color .15s, box-shadow .15s}
+.card:hover{border-color:#CBD3E2}
+.card.on{border-color:transparent; box-shadow:inset 0 0 0 1.5px var(--c), 0 6px 16px -10px var(--c)}
+.card.on::before{content:""; position:absolute; inset:0; background:var(--c); opacity:.055}
+.card-top{display:flex; align-items:center; gap:7px; position:relative}
+.swatch{width:8px; height:8px; border-radius:3px; background:var(--c); opacity:.35; flex:none}
+.card.on .swatch{opacity:1}
+.card-label{font-size:11.5px; color:var(--muted); font-weight:500}
+.card-val{font-family:var(--display); font-size:23px; font-weight:600; letter-spacing:-.028em;
+  margin-top:5px; position:relative; line-height:1.15}
+.spark{display:block; width:100%; height:24px; margin-top:4px; position:relative}
+.axis-tag{position:absolute; top:10px; right:11px; font-size:9.5px; font-weight:700; letter-spacing:.08em;
+  color:var(--c); background:#fff; border:1px solid var(--c); border-radius:4px; padding:1px 4px}
+
+/* ---------- chart ---------- */
+.chart-tools{display:flex; align-items:center; gap:10px; padding:6px 20px 0; flex-wrap:wrap}
+.seg{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; height:30px}
+.seg button{background:#fff; border:none; border-right:1px solid var(--line); padding:0 12px;
+  font-size:12px; color:var(--muted); font-weight:500}
+.seg button:last-child{border-right:none}
+.seg button.active{background:var(--canvas); color:var(--ink); font-weight:600}
+.hint{font-size:11.5px; color:var(--muted-2)}
+.chart-box{position:relative; padding:10px 12px 18px}
+.chart-box svg{display:block; width:100%; height:auto; overflow:visible}
+.tip{position:absolute; pointer-events:none; opacity:0; transition:opacity .1s; background:var(--ink);
+  color:#fff; border-radius:9px; padding:9px 11px; font-size:12px;
+  box-shadow:0 10px 26px -8px rgba(12,18,34,.5); white-space:nowrap; z-index:20; transform:translate(-50%,-115%)}
+.tip .tip-date{font-family:var(--display); font-weight:600; margin-bottom:5px; font-size:12.5px}
+.tip .tip-row{display:flex; align-items:center; gap:7px; color:#C7CDDD}
+.tip .tip-row b{color:#fff; margin-left:auto; font-family:var(--display); font-weight:500}
+.tip i{width:7px; height:7px; border-radius:2px; display:inline-block}
+
+.foot{display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:11.5px;
+  color:var(--muted-2); padding:2px 4px}
+.foot b{color:var(--muted); font-weight:600}
+.loading{padding:60px 20px; text-align:center; color:var(--muted); font-size:13px}
+
+@media (max-width:1080px){ .cards{grid-template-columns:repeat(3,1fr)} .ms-toggle{min-width:190px} }
+@media (max-width:640px){
+  .wrap{padding:14px 12px 40px} .topbar{padding:12px 14px; gap:12px}
+  .cards{grid-template-columns:repeat(2,1fr)} .ms-panel{width:min(88vw,340px)}
+  .filters{padding:14px} .presets{width:100%; overflow-x:auto}
+}
+@media print{
+  body{background:#fff}
+  .topbar{background:#fff; color:var(--ink); border-bottom:2px solid var(--ink)}
+  .filters,.btn,.btn-run,.btn-ghost,.chart-tools,.demo-strip,.views{display:none}
+  .panel{box-shadow:none; break-inside:avoid}
+  /* the projection disclaimer must survive onto paper */
+  .proj-bar{background:#FFF6E9 !important; border:1px solid #C9A15E !important;
+    color:#6B430D !important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  .proj-bar .pb-mark{background:#E07A23 !important; color:#fff !important;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  th.col-proj{background:#6B430D !important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  td.col-proj{color:#6B430D !important}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
+</style>
+</head>
+<body>
+
+<!-- ============ APP ============ -->
+<div id="app">
+<div class="demo-strip" id="demoStrip" hidden>
+  <!--<b>Demo data</b> — running on the sample dataset. Add your Apps Script URL to <b>CONFIG.apiUrl</b> to go live.-->
+</div>
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">DM</div>
+    <div><div class="brand-name">Digital Media Hawkers</div><div class="brand-sub">Client reporting</div></div>
+  </div>
+  <div class="client-tag">
+    <b id="clientName">—</b><span>×</span><span id="partnerName">Phoenix Ads</span>
+    <select id="clientSwitch" hidden aria-label="Switch client"></select>
+  </div>
+  <div class="topbar-right">
+    <button class="live" id="btnRefresh" title="Refresh now">
+      <span class="dot" id="liveDot"></span><span id="liveLabel">Live</span>
+    </button>
+    <div class="who" id="whoAmI">—</div>
+    <button class="btn" id="btnOut">Sign out</button>
+  </div>
+</header>
+
+<div class="wrap" id="wrap">
+  <div class="err-bar" id="errBar" hidden><span id="errText"></span><button id="errRetry">Try again</button></div>
+  <section class="panel">
+    <div class="filters">
+      <div class="field">
+        <label for="msToggle">Campaign</label>
+        <div class="ms">
+          <button class="control ms-toggle" id="msToggle" aria-haspopup="true" aria-expanded="false">
+            <span id="msLabel">All campaigns</span><span class="caret">▼</span>
+          </button>
+          <div class="ms-panel" id="msPanel" role="group" aria-label="Choose campaigns">
+            <div class="ms-actions">
+              <button class="link-btn" id="msAll">Select all</button>
+              <button class="link-btn" id="msNone">Clear</button>
+            </div>
+            <div id="msList"></div>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Date range</label>
+        <div class="presets" id="presets">
+          <button class="preset" data-days="7">7 days</button>
+          <button class="preset" data-days="30">30 days</button>
+          <button class="preset" data-days="90">90 days</button>
+          <button class="preset" data-days="month">This month</button>
+          <button class="preset" data-days="all">Campaign to date</button>
+        </div>
+      </div>
+      <div class="field"><label for="fromDate">From</label><input class="control" type="date" id="fromDate"></div>
+      <div class="field"><label for="toDate">To</label><input class="control" type="date" id="toDate"></div>
+      <button class="btn-run" id="btnRun">Run query</button>
+      <button class="btn-ghost" id="btnReset">Reset</button>
+    </div>
+    <div class="pacing">
+      <div class="pace-label">Budget pacing · <b id="paceSpend">—</b> of <b id="paceBudget">—</b></div>
+      <div class="pace-bar"><div class="pace-fill" id="paceFill" style="width:0%"></div></div>
+      <div class="pace-label"><b id="pacePct">0%</b> utilised</div>
+      <div class="pace-label" id="paceDays">—</div>
+    </div>
+  </section>
+
+  <section class="proj-bar" id="projBar" hidden>
+    <span class="pb-mark">Projected</span>
+    <span class="pb-text" id="projText"></span>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">Campaign performance</h2>
+      <span class="panel-note" id="tableNote">—</span>
+      <span class="spacer"></span>
+      <div class="views" id="views" role="group" aria-label="Which figures to show">
+        <button data-v="projected"><i class="sw p"></i>Projected</button>
+        <button data-v="delivered"><i class="sw d"></i>Delivered</button>
+        <button data-v="pacing"><i class="sw b"></i>Pacing</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table id="tbl">
+        <thead><tr id="thRow"></tr></thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+    <div class="empty" id="tblEmpty" hidden>
+      <b>No delivery in this window</b>Widen the dates or select more campaigns.
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">Delivery trend</h2>
+      <span class="panel-note" id="chartNote">—</span>
+    </div>
+    <div class="cards" id="cards"></div>
+    <div class="chart-tools">
+      <div class="seg" id="gran">
+        <button data-g="day" class="active">Daily</button>
+        <button data-g="week">Weekly</button>
+        <button data-g="month">Monthly</button>
+      </div>
+      <span class="hint" id="scopeHint">All campaigns</span>
+    </div>
+    <div class="chart-box" id="chartBox">
+      <svg id="chart" role="img" aria-label="Performance over time"></svg>
+      <div class="tip" id="tip"></div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <span><b>Source:</b> <span id="footPartner">Phoenix Ads</span> export via Google Sheets</span>·
+    <span><b>Result</b> = clicks on CPM buys, installs on CPD buys</span>·
+    <span>Prepared by Digital Media Hawkers</span>
+  </div>
+</div>
+</div>
+
+<script>
+/* =================================================================
+   CONFIG — paste your Apps Script Web App URL here to go live.
+   Leave blank and the portal runs on the bundled demo dataset.
+   ================================================================= */
+const CONFIG = {
+  apiUrl: '',                 // e.g. 'https://script.google.com/macros/s/AKfyc.../exec'
+  partner: 'Phoenix Ads',
+  refreshSeconds: 45,         // how often to re-read the client's sheet. 0 turns polling off.
+};
+
+const DEMO = {"startDate":"2025-08-01","endDate":"2026-09-15","days":411,"clients":[{"id":"KCB","name":"KCB Group","partner":"Phoenix Ads","currency":"USD","budget":42000},{"id":"SAF","name":"Safaricom PLC","partner":"Phoenix Ads","currency":"USD","budget":68000}],"campaigns":[{"id":41040,"client":"KCB","name":"KCB_MBP_Campaign_Common_Cents_2026","start":"2026-07-15","end":"2026-08-04","billing":"cpm","rate":1.5,"rows":[[348,37220,1667,55.83,0],[349,42610,1701,63.915,0],[350,45543,1106,68.3145,0],[351,46701,1677,70.0515,0],[352,31397,1211,47.0955,0],[353,49307,1646,73.9605,0],[354,64409,2175,96.6135,0],[355,27811,1076,41.7165,0],[356,66414,2746,99.621,0],[357,41271,1568,61.9065,0],[358,116542,3159,174.813,0],[359,22747,913,34.1205,0],[360,35551,1136,53.3265,0],[361,74156,2489,111.234,0],[362,62210,2088,93.315,0],[363,96745,3247,145.1175,0],[364,56795,1906,85.1925,0],[365,88800,2980,133.2,0],[366,77047,2586,115.5705,0],[367,55798,1873,83.697,0],[368,86835,2914,130.2525,0]],"ctr":0.0341,"budget":2114.69,"shape":"weekday","targets":{"impressions":1409793,"clicks":48074,"downloads":0,"cpc":0.04398826979472141,"cpm":1.5,"cpd":0,"results":48074},"plan":[[348,73427,2504,110.14,0],[349,73427,2504,110.14,0],[350,73427,2504,110.14,0],[351,51398,1753,77.1,0],[352,51398,1753,77.1,0],[353,73427,2504,110.14,0],[354,73427,2504,110.14,0],[355,73427,2504,110.14,0],[356,73427,2504,110.14,0],[357,73427,2504,110.14,0],[358,51398,1752,77.1,0],[359,51398,1752,77.1,0],[360,73427,2504,110.14,0],[361,73427,2504,110.14,0],[362,73427,2504,110.14,0],[363,73427,2504,110.14,0],[364,73427,2504,110.14,0],[365,51398,1752,77.1,0],[366,51398,1752,77.09,0],[367,73427,2504,110.14,0],[368,73427,2504,110.14,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":41048,"client":"KCB","name":"KCB_MBP_Campaign_Common_Cents_2_2026","start":"2026-07-28","end":"2026-08-04","billing":"cpm","rate":1.5,"rows":[[361,859,149,1.2885,0],[362,1292,223,1.938,0],[363,895,155,1.3425,0],[364,917,159,1.3755,0],[365,1282,222,1.923,0],[366,1721,298,2.5815,0],[367,953,165,1.4295,0],[368,1062,184,1.593,0]],"ctr":0.1731,"budget":15.49,"shape":"weekday","targets":{"impressions":10327,"clicks":1788,"downloads":0,"cpc":0.008665511265164646,"cpm":1.5,"cpd":0,"results":1788},"plan":[[361,1396,242,2.1,0],[362,1396,242,2.09,0],[363,1396,242,2.09,0],[364,1395,242,2.09,0],[365,977,169,1.47,0],[366,977,169,1.47,0],[367,1395,241,2.09,0],[368,1395,241,2.09,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":41070,"client":"KCB","name":"KCB_MBP_Campaign_Hidden_A_2026","start":"2026-07-10","end":"2026-08-04","billing":"cpm","rate":1.5,"rows":[[343,7,2,0.0105,0],[344,13,4,0.0195,0],[345,7,2,0.0105,0],[346,16,6,0.024,0],[347,8,2,0.012,0],[348,11,3,0.0165,0],[349,6,1,0.009,0],[350,12,4,0.018,0],[351,9,2,0.0135,0],[352,5,1,0.0075,0],[353,16,5,0.024,0],[354,10,2,0.015,0],[355,7,1,0.0105,0],[356,8,2,0.012,0],[357,6,1,0.009,0],[358,8,1,0.012,0],[359,10,2,0.015,0],[360,10,2,0.015,0],[361,0,1,0.0,0],[362,0,1,0.0,0],[363,0,0,0.0,0],[364,0,0,0.0,0],[365,0,1,0.0,0],[366,0,0,0.0,0],[367,0,1,0.0,0],[368,0,0,0.0,0]],"ctr":0.25,"budget":0.29,"shape":"weekday","targets":{"impressions":193,"clicks":48,"downloads":0,"cpc":0.005999999999999999,"cpm":1.5,"cpd":0,"results":48},"plan":[[343,9,2,0.02,0],[344,6,2,0.01,0],[345,6,2,0.01,0],[346,8,2,0.02,0],[347,8,2,0.02,0],[348,8,2,0.01,0],[349,8,2,0.01,0],[350,8,2,0.01,0],[351,6,2,0.01,0],[352,6,2,0.01,0],[353,8,2,0.01,0],[354,8,2,0.01,0],[355,8,2,0.01,0],[356,8,2,0.01,0],[357,8,2,0.01,0],[358,6,1,0.01,0],[359,6,1,0.01,0],[360,8,2,0.01,0],[361,8,2,0.01,0],[362,8,2,0.01,0],[363,8,2,0.01,0],[364,8,2,0.01,0],[365,6,1,0.01,0],[366,6,1,0.01,0],[367,8,2,0.01,0],[368,8,2,0.01,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":40943,"client":"KCB","name":"KCB_MBP_Campaign_Hidden_B_2026","start":"2026-07-01","end":"2026-08-04","billing":"cpm","rate":1.5,"rows":[[334,15,6,0.0225,0],[335,11,2,0.0165,0],[336,10,2,0.015,0],[337,6,1,0.009,0],[338,10,2,0.015,0],[339,6,1,0.009,0],[340,15,5,0.0225,0],[341,10,2,0.015,0],[342,12,4,0.018,0],[343,9,3,0.0135,0],[344,12,4,0.018,0],[345,11,2,0.0165,0],[346,10,2,0.015,0],[347,30,7,0.045,0],[348,16,4,0.024,0],[349,17,6,0.0255,0],[350,8,2,0.012,0],[351,7,2,0.0105,0],[352,12,3,0.018,0],[353,15,3,0.0225,0],[354,16,5,0.024,0],[355,11,2,0.0165,0],[356,10,3,0.015,0],[357,10,2,0.015,0],[358,11,2,0.0165,0],[359,6,2,0.009,0],[360,8,2,0.012,0],[361,0,0,0.0,0],[362,0,0,0.0,0],[363,0,0,0.0,0],[364,0,1,0.0,0],[365,0,0,0.0,0],[366,0,1,0.0,0],[367,0,1,0.0,0],[368,0,0,0.0,0]],"ctr":0.25,"budget":0.54,"shape":"weekday","targets":{"impressions":360,"clicks":90,"downloads":0,"cpc":0.005999999999999999,"cpm":1.5,"cpd":0,"results":90},"plan":[[334,12,3,0.02,0],[335,12,3,0.02,0],[336,12,3,0.02,0],[337,8,2,0.01,0],[338,8,2,0.01,0],[339,12,3,0.02,0],[340,12,3,0.02,0],[341,11,3,0.02,0],[342,11,3,0.02,0],[343,11,3,0.02,0],[344,8,2,0.01,0],[345,8,2,0.01,0],[346,11,3,0.02,0],[347,11,3,0.02,0],[348,11,3,0.02,0],[349,11,3,0.02,0],[350,11,3,0.02,0],[351,8,2,0.01,0],[352,8,2,0.01,0],[353,11,3,0.02,0],[354,11,3,0.02,0],[355,11,3,0.02,0],[356,11,3,0.02,0],[357,11,3,0.02,0],[358,8,2,0.01,0],[359,8,2,0.01,0],[360,11,3,0.02,0],[361,11,3,0.01,0],[362,11,2,0.01,0],[363,11,2,0.01,0],[364,11,2,0.01,0],[365,8,2,0.01,0],[366,8,2,0.01,0],[367,11,2,0.01,0],[368,11,2,0.01,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":38175,"client":"KCB","name":"KCB_MBP_Campaign_PesaLink_June_2026","start":"2026-06-01","end":"2026-08-04","billing":"cpm","rate":1.5,"rows":[[304,45,6,0.0675,0],[305,26,2,0.039,0],[306,45,7,0.0675,0],[307,37,7,0.0555,0],[308,29,3,0.0435,0],[309,25,4,0.0375,0],[310,30,3,0.045,0],[311,34,5,0.051,0],[312,54,7,0.081,0],[313,40,6,0.06,0],[314,22,3,0.033,0],[315,22,4,0.033,0],[316,32,5,0.048,0],[317,27,4,0.0405,0],[318,50,5,0.075,0],[319,30,3,0.045,0],[320,40,6,0.06,0],[321,54,8,0.081,0],[322,40,6,0.06,0],[323,31,4,0.0465,0],[324,45,7,0.0675,0],[325,55,7,0.0825,0],[326,55,10,0.0825,0],[327,26,3,0.039,0],[328,30,3,0.045,0],[329,50,9,0.075,0],[330,39,6,0.0585,0],[331,44,8,0.066,0],[332,56,8,0.084,0],[333,57,10,0.0855,0],[334,37,5,0.0555,0],[335,29,3,0.0435,0],[336,22,3,0.033,0],[337,18,2,0.027,0],[338,33,3,0.0495,0],[339,50,9,0.075,0],[340,31,3,0.0465,0],[341,31,3,0.0465,0],[342,54,9,0.081,0],[343,27,5,0.0405,0],[344,38,4,0.057,0],[345,38,5,0.057,0],[346,55,9,0.0825,0],[347,25,4,0.0375,0],[348,53,7,0.0795,0],[349,41,8,0.0615,0],[350,26,4,0.039,0],[351,21,2,0.0315,0],[352,23,3,0.0345,0],[353,49,6,0.0735,0],[354,28,3,0.042,0],[355,99,10,0.1485,0],[356,41,5,0.0615,0],[357,55,6,0.0825,0],[358,30,4,0.045,0],[359,29,4,0.0435,0],[360,57,7,0.0855,0],[361,0,0,0.0,0],[362,0,0,0.0,0],[363,0,0,0.0,0],[364,0,0,0.0,0],[365,0,1,0.0,0],[366,0,0,0.0,0],[367,0,0,0.0,0],[368,0,0,0.0,0]],"ctr":0.1385,"budget":3.81,"shape":"weekday","targets":{"impressions":2540,"clicks":352,"downloads":0,"cpc":0.010830324909747292,"cpm":1.5,"cpd":0,"results":352},"plan":[[304,43,6,0.07,0],[305,43,6,0.07,0],[306,43,6,0.07,0],[307,43,6,0.07,0],[308,43,6,0.07,0],[309,30,4,0.05,0],[310,30,4,0.05,0],[311,43,6,0.07,0],[312,43,6,0.07,0],[313,43,6,0.07,0],[314,43,6,0.07,0],[315,43,6,0.06,0],[316,30,4,0.05,0],[317,30,4,0.05,0],[318,43,6,0.06,0],[319,43,6,0.06,0],[320,43,6,0.06,0],[321,43,6,0.06,0],[322,43,6,0.06,0],[323,30,4,0.05,0],[324,30,4,0.05,0],[325,43,6,0.06,0],[326,43,6,0.06,0],[327,43,6,0.06,0],[328,43,6,0.06,0],[329,43,6,0.06,0],[330,30,4,0.05,0],[331,30,4,0.05,0],[332,43,6,0.06,0],[333,43,6,0.06,0],[334,43,6,0.06,0],[335,43,6,0.06,0],[336,43,6,0.06,0],[337,30,4,0.05,0],[338,30,4,0.05,0],[339,43,6,0.06,0],[340,42,6,0.06,0],[341,42,6,0.06,0],[342,42,6,0.06,0],[343,42,6,0.06,0],[344,30,4,0.05,0],[345,30,4,0.05,0],[346,42,6,0.06,0],[347,42,6,0.06,0],[348,42,6,0.06,0],[349,42,6,0.06,0],[350,42,6,0.06,0],[351,30,4,0.05,0],[352,30,4,0.05,0],[353,42,6,0.06,0],[354,42,6,0.06,0],[355,42,6,0.06,0],[356,42,6,0.06,0],[357,42,6,0.06,0],[358,30,4,0.05,0],[359,30,4,0.05,0],[360,42,6,0.06,0],[361,42,6,0.06,0],[362,42,6,0.06,0],[363,42,6,0.06,0],[364,42,6,0.06,0],[365,30,4,0.05,0],[366,30,4,0.05,0],[367,42,5,0.06,0],[368,42,5,0.06,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":36824,"client":"KCB","name":"KCB_MBP_KPLC_Campaign_May2026_USSD","start":"2026-05-01","end":"2026-08-04","billing":"cpc","rate":1.5,"rows":[[273,106,84,0.159,0],[274,63,33,0.0945,0],[275,45,38,0.0675,0],[276,62,33,0.093,0],[277,120,98,0.18,0],[278,69,44,0.1035,0],[279,62,44,0.093,0],[280,127,121,0.1905,0],[281,56,53,0.084,0],[282,64,32,0.096,0],[283,87,64,0.1305,0],[284,90,45,0.135,0],[285,56,38,0.084,0],[286,164,106,0.246,0],[287,96,72,0.144,0],[288,84,70,0.126,0],[289,66,43,0.099,0],[290,61,51,0.0915,0],[291,53,47,0.0795,0],[292,100,84,0.15,0],[293,60,44,0.09,0],[294,117,103,0.1755,0],[295,79,72,0.1185,0],[296,86,52,0.129,0],[297,192,129,0.288,0],[298,117,89,0.1755,0],[299,100,82,0.15,0],[300,49,42,0.0735,0],[301,90,67,0.135,0],[302,44,37,0.066,0],[303,45,28,0.0675,0],[304,66,56,0.099,0],[305,89,60,0.1335,0],[306,104,89,0.156,0],[307,101,54,0.1515,0],[308,70,59,0.105,0],[309,78,39,0.117,0],[310,58,47,0.087,0],[311,104,66,0.156,0],[312,87,62,0.1305,0],[313,121,72,0.1815,0],[314,125,64,0.1875,0],[315,115,110,0.1725,0],[316,58,34,0.087,0],[317,54,41,0.081,0],[318,91,86,0.1365,0],[319,115,85,0.1725,0],[320,106,64,0.159,0],[321,88,45,0.132,0],[322,285,203,0.4275,0],[323,49,32,0.0735,0],[324,96,48,0.144,0],[325,117,65,0.1755,0],[326,107,99,0.1605,0],[327,79,54,0.1185,0],[328,97,65,0.1455,0],[329,71,37,0.1065,0],[330,96,61,0.144,0],[331,57,35,0.0855,0],[332,64,43,0.096,0],[333,121,106,0.1815,0],[334,123,116,0.1845,0],[335,107,56,0.1605,0],[336,86,73,0.129,0],[337,59,31,0.0885,0],[338,49,35,0.0735,0],[339,73,62,0.1095,0],[340,70,56,0.105,0],[341,94,64,0.141,0],[342,62,37,0.093,0],[343,89,54,0.1335,0],[344,106,75,0.159,0],[345,53,28,0.0795,0],[346,56,34,0.084,0],[347,95,87,0.1425,0],[348,82,57,0.123,0],[349,80,52,0.12,0],[350,71,67,0.1065,0],[351,74,59,0.111,0],[352,54,34,0.081,0],[353,81,57,0.1215,0],[354,118,107,0.177,0],[355,166,138,0.249,0],[356,87,67,0.1305,0],[357,259,242,0.3885,0],[358,97,93,0.1455,0],[359,47,27,0.0705,0],[360,104,98,0.156,0],[361,21,17,0.0315,0],[362,19,15,0.0285,0],[363,27,22,0.0405,0],[364,26,20,0.039,0],[365,18,14,0.027,0],[366,23,18,0.0345,0],[367,22,18,0.033,0],[368,29,23,0.0435,0]],"ctr":0.25,"budget":13.98,"shape":"weekday","targets":{"impressions":9320,"clicks":2330,"downloads":0,"cpc":0.006,"cpm":1.5,"cpd":0,"results":2330},"plan":[[273,107,27,0.16,0],[274,75,19,0.12,0],[275,75,19,0.12,0],[276,107,27,0.16,0],[277,107,27,0.16,0],[278,107,27,0.16,0],[279,107,27,0.16,0],[280,107,27,0.16,0],[281,75,19,0.11,0],[282,75,19,0.11,0],[283,107,27,0.16,0],[284,107,27,0.16,0],[285,107,27,0.16,0],[286,107,27,0.16,0],[287,107,27,0.16,0],[288,75,19,0.11,0],[289,75,19,0.11,0],[290,107,27,0.16,0],[291,106,27,0.16,0],[292,106,27,0.16,0],[293,106,27,0.16,0],[294,106,27,0.16,0],[295,75,19,0.11,0],[296,75,19,0.11,0],[297,106,27,0.16,0],[298,106,27,0.16,0],[299,106,27,0.16,0],[300,106,27,0.16,0],[301,106,27,0.16,0],[302,75,19,0.11,0],[303,75,19,0.11,0],[304,106,27,0.16,0],[305,106,27,0.16,0],[306,106,27,0.16,0],[307,106,27,0.16,0],[308,106,27,0.16,0],[309,75,19,0.11,0],[310,75,19,0.11,0],[311,106,27,0.16,0],[312,106,27,0.16,0],[313,106,27,0.16,0],[314,106,27,0.16,0],[315,106,26,0.16,0],[316,75,19,0.11,0],[317,75,19,0.11,0],[318,106,26,0.16,0],[319,106,26,0.16,0],[320,106,26,0.16,0],[321,106,26,0.16,0],[322,106,26,0.16,0],[323,75,19,0.11,0],[324,75,19,0.11,0],[325,106,26,0.16,0],[326,106,26,0.16,0],[327,106,26,0.16,0],[328,106,26,0.16,0],[329,106,26,0.16,0],[330,75,19,0.11,0],[331,75,19,0.11,0],[332,106,26,0.16,0],[333,106,26,0.16,0],[334,106,26,0.16,0],[335,106,26,0.16,0],[336,106,26,0.16,0],[337,75,19,0.11,0],[338,75,19,0.11,0],[339,106,26,0.16,0],[340,106,26,0.16,0],[341,106,26,0.16,0],[342,106,26,0.16,0],[343,106,26,0.16,0],[344,75,19,0.11,0],[345,75,19,0.11,0],[346,106,26,0.16,0],[347,106,26,0.16,0],[348,106,26,0.16,0],[349,106,26,0.16,0],[350,106,26,0.16,0],[351,75,19,0.11,0],[352,75,19,0.11,0],[353,106,26,0.16,0],[354,106,26,0.16,0],[355,106,26,0.16,0],[356,106,26,0.16,0],[357,106,26,0.16,0],[358,75,19,0.11,0],[359,75,19,0.11,0],[360,106,26,0.16,0],[361,106,26,0.16,0],[362,106,26,0.16,0],[363,106,26,0.16,0],[364,106,26,0.16,0],[365,75,19,0.11,0],[366,75,19,0.11,0],[367,106,26,0.16,0],[368,106,26,0.16,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":33110,"client":"KCB","name":"KCB_MBP_Campaign_Vooma_Q1_2026","start":"2026-01-06","end":"2026-02-10","billing":"cpm","rate":1.5,"rows":[[158,72487,1561,108.7305,0],[159,66966,874,100.449,0],[160,48596,1135,72.894,0],[161,52697,742,79.0455,0],[162,58917,1223,88.3755,0],[163,32186,603,48.279,0],[164,57553,875,86.3295,0],[165,35802,577,53.703,0],[166,90434,1821,135.651,0],[167,62577,960,93.8655,0],[168,90531,1887,135.7965,0],[169,29893,550,44.8395,0],[170,48702,760,73.053,0],[171,88489,1349,132.7335,0],[172,174949,3065,262.4235,0],[173,46609,1021,69.9135,0],[174,64280,964,96.42,0],[175,53154,1179,79.731,0],[176,39323,845,58.9845,0],[177,73825,1358,110.7375,0],[178,48063,840,72.0945,0],[179,89848,1285,134.772,0],[180,47465,1139,71.1975,0],[181,38186,508,57.279,0],[182,86934,1994,130.401,0],[183,75979,1785,113.9685,0],[184,37626,886,56.439,0],[185,37037,754,55.5555,0],[186,56735,935,85.1025,0],[187,35365,561,53.0475,0],[188,90237,1267,135.3555,0],[189,47146,790,70.719,0],[190,67689,1195,101.5335,0],[191,51226,868,76.839,0],[192,46318,781,69.477,0],[193,36944,643,55.416,0]],"ctr":0.0181,"budget":3761.82,"shape":"weekday","targets":{"impressions":2507880,"clicks":45393,"downloads":0,"cpc":0.08287292817679558,"cpm":1.5,"cpd":0,"results":45393},"plan":[[158,75997,1376,114.0,0],[159,75997,1376,114.0,0],[160,75997,1376,114.0,0],[161,75997,1376,114.0,0],[162,53198,963,79.8,0],[163,53198,963,79.8,0],[164,75996,1376,114.0,0],[165,75996,1376,114.0,0],[166,75996,1376,114.0,0],[167,75996,1376,114.0,0],[168,75996,1376,113.99,0],[169,53198,963,79.8,0],[170,53198,963,79.8,0],[171,75996,1376,113.99,0],[172,75996,1376,113.99,0],[173,75996,1376,113.99,0],[174,75996,1376,113.99,0],[175,75996,1375,113.99,0],[176,53198,963,79.8,0],[177,53198,963,79.8,0],[178,75996,1375,113.99,0],[179,75996,1375,113.99,0],[180,75996,1375,113.99,0],[181,75996,1375,113.99,0],[182,75996,1375,113.99,0],[183,53198,963,79.8,0],[184,53198,963,79.8,0],[185,75996,1375,113.99,0],[186,75996,1375,113.99,0],[187,75996,1375,113.99,0],[188,75996,1375,113.99,0],[189,75996,1375,113.99,0],[190,53198,963,79.8,0],[191,53198,963,79.8,0],[192,75996,1375,113.99,0],[193,75996,1375,113.99,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":31220,"client":"KCB","name":"KCB_MBP_Campaign_Brand_Awareness_2025","start":"2025-08-01","end":"2025-12-22","billing":"cpm","rate":1.5,"rows":[[0,156240,1906,234.36,0],[1,200464,4371,300.696,0],[2,126314,2724,189.471,0],[3,100180,2225,150.27,0],[4,99030,1939,148.545,0],[5,100556,1186,150.834,0],[6,173226,3236,259.839,0],[7,72050,1031,108.075,0],[8,145794,3233,218.691,0],[9,80170,1319,120.255,0],[10,174546,2401,261.819,0],[11,153044,3174,229.566,0],[12,138162,2119,207.243,0],[13,110334,2240,165.501,0],[14,91675,1831,137.5125,0],[15,62845,762,94.2675,0],[16,87117,1957,130.6755,0],[17,181319,2656,271.9785,0],[18,80234,1380,120.351,0],[19,119985,1717,179.9775,0],[20,139642,2670,209.463,0],[21,165348,3144,248.022,0],[22,135016,2020,202.524,0],[23,91507,1813,137.2605,0],[24,97358,1405,146.037,0],[25,169564,3064,254.346,0],[26,114214,2580,171.321,0],[27,95538,1966,143.307,0],[28,181674,2339,272.511,0],[29,132992,2784,199.488,0],[30,60579,906,90.8685,0],[31,90797,2032,136.1955,0],[32,174781,2765,262.1715,0],[33,120229,1755,180.3435,0],[34,176542,2280,264.813,0],[35,139602,1973,209.403,0],[36,69971,978,104.9565,0],[37,112565,2124,168.8475,0],[38,70590,1082,105.885,0],[39,90295,1369,135.4425,0],[40,159484,2829,239.226,0],[41,80797,1298,121.1955,0],[42,141783,1808,212.6745,0],[43,121490,1972,182.235,0],[44,85428,1893,128.142,0],[45,133543,2091,200.3145,0],[46,167305,3788,250.9575,0],[47,91662,1806,137.493,0],[48,69966,1511,104.949,0],[49,162329,2629,243.4935,0],[50,99684,1349,149.526,0],[51,345962,6488,518.943,0],[52,79396,1473,119.094,0],[53,126506,1689,189.759,0],[54,128399,2807,192.5985,0],[55,124923,2566,187.3845,0],[56,91678,1204,137.517,0],[57,147540,2512,221.31,0],[58,142948,2286,214.422,0],[59,139646,2899,209.469,0],[60,158412,2247,237.618,0],[61,165276,3440,247.914,0],[62,94036,1516,141.054,0],[63,112797,1478,169.1955,0],[64,124231,2678,186.3465,0],[65,349174,6994,523.761,0],[66,525927,6861,788.8905,0],[67,131675,2450,197.5125,0],[68,116936,2119,175.404,0],[69,144012,2396,216.018,0],[70,71950,1332,107.925,0],[71,78701,1581,118.0515,0],[72,99441,1364,149.1615,0],[73,81442,1071,122.163,0],[74,79700,1321,119.55,0],[75,73922,1383,110.883,0],[76,152476,3087,228.714,0],[77,75453,1302,113.1795,0],[78,145245,1924,217.8675,0],[79,149453,2952,224.1795,0],[80,91266,2051,136.899,0],[81,177782,3869,266.673,0],[82,158702,3479,238.053,0],[83,109091,2183,163.6365,0],[84,170967,2523,256.4505,0],[85,70176,1210,105.264,0],[86,76197,1114,114.2955,0],[87,105483,1282,158.2245,0],[88,87583,1925,131.3745,0],[89,170839,2323,256.2585,0],[90,82349,1445,123.5235,0],[91,110098,2344,165.147,0],[92,110763,2370,166.1445,0],[93,149158,2779,223.737,0],[94,159755,2340,239.6325,0],[95,134772,2115,202.158,0],[96,119454,1635,179.181,0],[97,74776,1548,112.164,0],[98,141789,3191,212.6835,0],[99,118541,1798,177.8115,0],[100,191898,2569,287.847,0],[101,118315,2053,177.4725,0],[102,84271,1200,126.4065,0],[103,71827,846,107.7405,0],[104,81361,1274,122.0415,0],[105,135479,2464,203.2185,0],[106,114843,1946,172.2645,0],[107,143917,2075,215.8755,0],[108,80164,1501,120.246,0],[109,157996,2551,236.994,0],[110,70603,1327,105.9045,0],[111,109027,2050,163.5405,0],[112,175573,3471,263.3595,0],[113,140840,1723,211.26,0],[114,94578,1357,141.867,0],[115,157624,1874,236.436,0],[116,176000,2343,264.0,0],[117,138256,2391,207.384,0],[118,161537,2207,242.3055,0],[119,103350,1270,155.025,0],[120,129633,2537,194.4495,0],[121,433113,8617,649.6695,0],[122,153415,2562,230.1225,0],[123,81238,1161,121.857,0],[124,343512,6851,515.268,0],[125,165160,3225,247.74,0],[126,132099,2182,198.1485,0],[127,105481,1546,158.2215,0],[128,146572,2071,219.858,0],[129,71026,1037,106.539,0],[130,153655,3392,230.4825,0],[131,106367,2273,159.5505,0],[132,96421,2089,144.6315,0],[133,147868,2813,221.802,0],[134,100483,2103,150.7245,0],[135,136565,2258,204.8475,0],[136,133976,2025,200.964,0],[137,139905,1764,209.8575,0],[138,85697,1032,128.5455,0],[139,174642,2711,261.963,0],[140,72558,886,108.837,0],[141,115769,2242,173.6535,0],[142,62941,1146,94.4115,0],[143,162011,3355,243.0165,0]],"ctr":0.0172,"budget":32481.62,"shape":"weekday","targets":{"impressions":21654413,"clicks":372456,"downloads":0,"cpc":0.0872093023255814,"cpm":1.5,"cpd":0,"results":372456},"plan":[[0,164798,2835,247.2,0],[1,115358,1984,173.04,0],[2,115358,1984,173.04,0],[3,164798,2835,247.2,0],[4,164798,2835,247.2,0],[5,164798,2835,247.2,0],[6,164798,2835,247.2,0],[7,164798,2835,247.2,0],[8,115358,1984,173.04,0],[9,115358,1984,173.04,0],[10,164798,2835,247.2,0],[11,164798,2835,247.2,0],[12,164798,2835,247.2,0],[13,164798,2835,247.2,0],[14,164798,2835,247.2,0],[15,115358,1984,173.04,0],[16,115358,1984,173.04,0],[17,164798,2835,247.2,0],[18,164798,2835,247.2,0],[19,164798,2835,247.2,0],[20,164798,2835,247.2,0],[21,164798,2835,247.2,0],[22,115358,1984,173.04,0],[23,115358,1984,173.04,0],[24,164798,2835,247.2,0],[25,164798,2835,247.2,0],[26,164798,2835,247.2,0],[27,164798,2835,247.2,0],[28,164798,2835,247.2,0],[29,115358,1984,173.04,0],[30,115358,1984,173.04,0],[31,164798,2835,247.2,0],[32,164798,2835,247.2,0],[33,164798,2835,247.2,0],[34,164798,2835,247.2,0],[35,164798,2835,247.2,0],[36,115358,1984,173.04,0],[37,115358,1984,173.04,0],[38,164798,2835,247.2,0],[39,164798,2835,247.2,0],[40,164798,2835,247.2,0],[41,164798,2835,247.2,0],[42,164798,2835,247.2,0],[43,115358,1984,173.04,0],[44,115358,1984,173.04,0],[45,164798,2835,247.2,0],[46,164798,2835,247.2,0],[47,164798,2835,247.2,0],[48,164798,2835,247.2,0],[49,164798,2835,247.2,0],[50,115358,1984,173.04,0],[51,115358,1984,173.04,0],[52,164798,2835,247.2,0],[53,164798,2835,247.2,0],[54,164798,2835,247.2,0],[55,164798,2835,247.2,0],[56,164798,2835,247.2,0],[57,115358,1984,173.04,0],[58,115358,1984,173.04,0],[59,164798,2835,247.2,0],[60,164798,2835,247.2,0],[61,164798,2835,247.2,0],[62,164798,2835,247.2,0],[63,164798,2835,247.2,0],[64,115358,1984,173.04,0],[65,115358,1984,173.04,0],[66,164798,2835,247.2,0],[67,164798,2835,247.2,0],[68,164798,2835,247.2,0],[69,164798,2835,247.2,0],[70,164798,2835,247.2,0],[71,115358,1984,173.04,0],[72,115358,1984,173.04,0],[73,164798,2835,247.2,0],[74,164798,2835,247.2,0],[75,164798,2835,247.2,0],[76,164798,2835,247.2,0],[77,164798,2835,247.2,0],[78,115358,1984,173.04,0],[79,115358,1984,173.04,0],[80,164798,2835,247.19,0],[81,164798,2835,247.19,0],[82,164798,2835,247.19,0],[83,164798,2835,247.19,0],[84,164798,2834,247.19,0],[85,115358,1984,173.04,0],[86,115358,1984,173.04,0],[87,164798,2834,247.19,0],[88,164798,2834,247.19,0],[89,164798,2834,247.19,0],[90,164798,2834,247.19,0],[91,164798,2834,247.19,0],[92,115358,1984,173.04,0],[93,115358,1984,173.04,0],[94,164798,2834,247.19,0],[95,164798,2834,247.19,0],[96,164798,2834,247.19,0],[97,164798,2834,247.19,0],[98,164798,2834,247.19,0],[99,115358,1984,173.04,0],[100,115358,1984,173.04,0],[101,164798,2834,247.19,0],[102,164798,2834,247.19,0],[103,164798,2834,247.19,0],[104,164798,2834,247.19,0],[105,164798,2834,247.19,0],[106,115358,1984,173.04,0],[107,115358,1984,173.04,0],[108,164798,2834,247.19,0],[109,164798,2834,247.19,0],[110,164798,2834,247.19,0],[111,164798,2834,247.19,0],[112,164798,2834,247.19,0],[113,115358,1984,173.04,0],[114,115358,1984,173.04,0],[115,164798,2834,247.19,0],[116,164798,2834,247.19,0],[117,164797,2834,247.19,0],[118,164797,2834,247.19,0],[119,164797,2834,247.19,0],[120,115358,1984,173.04,0],[121,115358,1984,173.04,0],[122,164797,2834,247.19,0],[123,164797,2834,247.19,0],[124,164797,2834,247.19,0],[125,164797,2834,247.19,0],[126,164797,2834,247.19,0],[127,115358,1984,173.04,0],[128,115358,1984,173.04,0],[129,164797,2834,247.19,0],[130,164797,2834,247.19,0],[131,164797,2834,247.19,0],[132,164797,2834,247.19,0],[133,164797,2834,247.19,0],[134,115358,1984,173.04,0],[135,115358,1984,173.04,0],[136,164797,2834,247.19,0],[137,164797,2834,247.19,0],[138,164797,2834,247.19,0],[139,164797,2834,247.19,0],[140,164797,2834,247.19,0],[141,115358,1984,173.04,0],[142,115358,1984,173.04,0],[143,164797,2834,247.19,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":40120,"client":"SAF","name":"PHX_SAF_Fuliza_Credit_Habit_2026","start":"2026-07-12","end":"2026-08-04","billing":"cpm","rate":1.8,"rows":[[345,36975,1355,66.555,0],[346,103592,2312,186.4656,0],[347,48157,1008,86.6826,0],[348,94780,3057,170.604,0],[349,82760,2128,148.968,0],[350,47217,1632,84.9906,0],[351,50802,1437,91.4436,0],[352,151657,3886,272.9826,0],[353,65210,1718,117.378,0],[354,74248,2698,133.6464,0],[355,42763,1200,76.9734,0],[356,92183,2473,165.9294,0],[357,76522,1865,137.7396,0],[358,38337,1370,69.0066,0],[359,33444,806,60.1992,0],[360,105825,2156,190.485,0],[361,73432,2593,132.1776,0],[362,73639,1976,132.5502,0],[363,58054,2211,104.4972,0],[364,54999,1841,98.9982,0],[365,39377,1271,70.8786,0],[366,76403,2555,137.5254,0],[367,82520,2228,148.536,0],[368,66980,2483,120.564,0]],"ctr":0.0289,"budget":3456.64,"shape":"weekday","targets":{"impressions":1920356,"clicks":55498,"downloads":0,"cpc":0.062283737024221464,"cpm":1.8,"cpd":0,"results":55498},"plan":[[345,61381,1774,110.48,0],[346,87688,2535,157.84,0],[347,87688,2535,157.84,0],[348,87688,2534,157.84,0],[349,87688,2534,157.84,0],[350,87688,2534,157.84,0],[351,61381,1774,110.48,0],[352,61381,1774,110.48,0],[353,87688,2534,157.84,0],[354,87688,2534,157.84,0],[355,87688,2534,157.84,0],[356,87688,2534,157.84,0],[357,87688,2534,157.84,0],[358,61381,1774,110.48,0],[359,61381,1774,110.48,0],[360,87687,2534,157.84,0],[361,87687,2534,157.84,0],[362,87687,2534,157.84,0],[363,87687,2534,157.84,0],[364,87687,2534,157.84,0],[365,61381,1774,110.48,0],[366,61381,1774,110.48,0],[367,87687,2534,157.84,0],[368,87687,2534,157.84,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":39880,"client":"SAF","name":"PHX_SAF_Fuliza_Bonga_Points_2026","start":"2026-07-01","end":"2026-08-04","billing":"cpm","rate":1.8,"rows":[[334,70179,1231,126.3222,0],[335,40917,1288,73.6506,0],[336,46351,1447,83.4318,0],[337,41139,1053,74.0502,0],[338,52348,1436,94.2264,0],[339,43887,861,78.9966,0],[340,59586,1725,107.2548,0],[341,49135,1447,88.443,0],[342,34499,845,62.0982,0],[343,39735,802,71.523,0],[344,50436,1542,90.7848,0],[345,29438,620,52.9884,0],[346,53037,1045,95.4666,0],[347,37457,1224,67.4226,0],[348,33364,1083,60.0552,0],[349,46582,1528,83.8476,0],[350,62918,1514,113.2524,0],[351,47935,903,86.283,0],[352,38354,678,69.0372,0],[353,65619,1849,118.1142,0],[354,58195,1427,104.751,0],[355,56853,1341,102.3354,0],[356,71094,1706,127.9692,0],[357,63657,1518,114.5826,0],[358,51167,1594,92.1006,0],[359,50318,1546,90.5724,0],[360,58624,1429,105.5232,0],[361,58003,1085,104.4054,0],[362,65215,1859,117.387,0],[363,40302,963,72.5436,0],[364,57689,1365,103.8402,0],[365,59149,1186,106.4682,0],[366,53315,1244,95.967,0],[367,74212,1317,133.5816,0],[368,36127,1069,65.0286,0]],"ctr":0.0249,"budget":3719.45,"shape":"weekday","targets":{"impressions":2066361,"clicks":51452,"downloads":0,"cpc":0.07228915662650603,"cpm":1.8,"cpd":0,"results":51452},"plan":[[334,64574,1608,116.23,0],[335,64574,1608,116.23,0],[336,64574,1608,116.23,0],[337,45202,1126,81.37,0],[338,45201,1126,81.37,0],[339,64574,1608,116.23,0],[340,64574,1608,116.23,0],[341,64574,1608,116.23,0],[342,64574,1608,116.23,0],[343,64574,1608,116.23,0],[344,45201,1125,81.37,0],[345,45201,1125,81.37,0],[346,64574,1608,116.23,0],[347,64574,1608,116.23,0],[348,64574,1608,116.23,0],[349,64574,1608,116.23,0],[350,64574,1608,116.23,0],[351,45201,1125,81.37,0],[352,45201,1125,81.37,0],[353,64574,1608,116.23,0],[354,64574,1608,116.23,0],[355,64574,1608,116.23,0],[356,64574,1608,116.23,0],[357,64574,1608,116.23,0],[358,45201,1125,81.37,0],[359,45201,1125,81.37,0],[360,64574,1608,116.23,0],[361,64574,1608,116.23,0],[362,64574,1608,116.23,0],[363,64574,1608,116.23,0],[364,64574,1608,116.23,0],[365,45201,1125,81.37,0],[366,45201,1125,81.37,0],[367,64574,1608,116.23,0],[368,64574,1608,116.23,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":39210,"client":"SAF","name":"PHX_SAF_Business_Positioning_2026","start":"2026-06-15","end":"2026-08-04","billing":"cpi","rate":0.42,"rows":[[318,89522,2810,124.74,297],[319,105209,4455,207.9,495],[320,89717,3556,202.86,483],[321,102601,4017,204.12,486],[322,126369,4823,130.62,311],[323,65645,1907,74.76,178],[324,85035,3238,110.04,262],[325,107124,5757,246.96,588],[326,111877,4379,141.54,337],[327,109907,5525,256.62,611],[328,92914,3226,185.64,442],[329,98992,5001,262.92,626],[330,58803,2546,74.76,178],[331,62726,3222,110.04,262],[332,68481,2743,86.1,205],[333,337810,12226,408.66,973],[334,86380,3465,161.28,384],[335,77104,4121,221.76,528],[336,113969,6022,310.38,739],[337,93677,4269,109.62,261],[338,324798,14999,503.58,1199],[339,59704,2085,106.68,254],[340,60491,3193,165.06,393],[341,118977,5343,274.68,654],[342,119197,5924,315.84,752],[343,103269,4424,221.76,528],[344,97012,4219,143.64,342],[345,48737,2039,55.02,131],[346,59838,2500,104.58,249],[347,116739,3370,179.76,428],[348,92955,4315,230.58,549],[349,81570,4429,122.64,292],[350,98781,2910,132.72,316],[351,100182,3757,218.4,520],[352,71164,3744,98.28,234],[353,97922,3693,199.92,476],[354,85983,3671,187.32,446],[355,82867,3311,144.9,345],[356,71596,3634,140.7,335],[357,69918,2950,170.94,407],[358,91120,3418,122.22,291],[359,77774,3547,182.7,435],[360,338035,17679,769.44,1832],[361,72192,2083,65.52,156],[362,96607,4466,230.58,549],[363,96849,4371,202.02,481],[364,95627,4479,144.48,344],[365,69424,3403,97.02,231],[366,42089,2076,115.92,276],[367,77614,3929,202.44,482],[368,68833,2529,99.54,237]],"ctr":0.0433,"budget":11017.23,"shape":"weekday","targets":{"impressions":6058083,"clicks":262315,"downloads":26232,"cpc":0.041999999999999996,"cpm":1.8186,"cpd":0.42,"results":26232},"plan":[[318,129446,5605,235.41,561],[319,129446,5605,235.41,561],[320,129446,5605,235.41,561],[321,129446,5605,235.41,561],[322,129446,5605,235.41,561],[323,90613,3924,164.79,392],[324,90613,3924,164.79,392],[325,129446,5605,235.41,561],[326,129446,5605,235.41,561],[327,129446,5605,235.41,561],[328,129446,5605,235.41,561],[329,129446,5605,235.41,561],[330,90613,3924,164.79,392],[331,90613,3924,164.79,392],[332,129446,5605,235.41,561],[333,129446,5605,235.41,561],[334,129446,5605,235.41,561],[335,129446,5605,235.41,561],[336,129446,5605,235.41,561],[337,90613,3924,164.79,392],[338,90613,3924,164.79,392],[339,129446,5605,235.41,561],[340,129446,5605,235.41,561],[341,129446,5605,235.41,561],[342,129446,5605,235.41,561],[343,129446,5605,235.41,561],[344,90613,3924,164.79,392],[345,90613,3924,164.79,392],[346,129446,5605,235.41,561],[347,129446,5605,235.41,561],[348,129446,5605,235.41,561],[349,129446,5605,235.41,561],[350,129446,5605,235.41,560],[351,90613,3923,164.79,392],[352,90613,3923,164.79,392],[353,129446,5605,235.41,560],[354,129446,5605,235.41,560],[355,129446,5605,235.41,560],[356,129446,5605,235.41,560],[357,129446,5605,235.41,560],[358,90613,3923,164.79,392],[359,90613,3923,164.79,392],[360,129446,5605,235.41,560],[361,129446,5605,235.41,560],[362,129446,5605,235.41,560],[363,129446,5605,235.41,560],[364,129446,5605,235.41,560],[365,90613,3923,164.79,392],[366,90612,3923,164.79,392],[367,129446,5605,235.41,560],[368,129446,5605,235.41,560]],"hasActuals":true,"outcomeLabel":"Installs"},{"id":34500,"client":"SAF","name":"PHX_SAF_Business_Awareness_Q1_2026","start":"2026-02-01","end":"2026-03-31","billing":"cpm","rate":1.8,"rows":[[184,44592,1021,80.2656,0],[185,34751,761,62.5518,0],[186,121932,3066,219.4776,0],[187,79852,1620,143.7336,0],[188,166748,3708,300.1464,0],[189,83096,1718,149.5728,0],[190,30525,700,54.945,0],[191,32654,475,58.7772,0],[192,216295,3454,389.331,0],[193,36500,946,65.7,0],[194,32827,785,59.0886,0],[195,70191,1182,126.3438,0],[196,72304,1725,130.1472,0],[197,57393,888,103.3074,0],[198,56516,1157,101.7288,0],[199,45161,1228,81.2898,0],[200,32495,472,58.491,0],[201,74565,1149,134.217,0],[202,69976,1158,125.9568,0],[203,57286,867,103.1148,0],[204,50768,1025,91.3824,0],[205,32360,808,58.248,0],[206,65563,1490,118.0134,0],[207,52035,1291,93.663,0],[208,72857,1595,131.1426,0],[209,35065,958,63.117,0],[210,75090,1409,135.162,0],[211,67996,1728,122.3928,0],[212,39367,789,70.8606,0],[213,51562,1210,92.8116,0],[214,78677,1975,141.6186,0],[215,31987,571,57.5766,0],[216,62522,1576,112.5396,0],[217,34107,868,61.3926,0],[218,63277,1390,113.8986,0],[219,62592,1571,112.6656,0],[220,79597,1510,143.2746,0],[221,60801,1518,109.4418,0],[222,71059,1901,127.9062,0],[223,63580,1486,114.444,0],[224,42683,757,76.8294,0],[225,60044,1229,108.0792,0],[226,60682,1495,109.2276,0],[227,62154,1634,111.8772,0],[228,59141,1224,106.4538,0],[229,41773,706,75.1914,0],[230,68495,1314,123.291,0],[231,52910,1123,95.238,0],[232,28066,775,50.5188,0],[233,30700,699,55.26,0],[234,40051,893,72.0918,0],[235,59015,863,106.227,0],[236,267517,6926,481.5306,0],[237,61507,1097,110.7126,0],[238,54134,1459,97.4412,0],[239,61207,1664,110.1726,0],[240,27779,473,50.0022,0],[241,36266,545,65.2788,0],[242,77348,1582,139.2264,0]],"ctr":0.0216,"budget":7779.05,"shape":"weekday","targets":{"impressions":4321694,"clicks":93349,"downloads":0,"cpc":0.08333333333333334,"cpm":1.8,"cpd":0,"results":93349},"plan":[[184,56126,1213,101.03,0],[185,80180,1732,144.33,0],[186,80180,1732,144.33,0],[187,80180,1732,144.33,0],[188,80180,1732,144.33,0],[189,80180,1732,144.33,0],[190,56126,1212,101.03,0],[191,56126,1212,101.03,0],[192,80180,1732,144.33,0],[193,80180,1732,144.33,0],[194,80180,1732,144.33,0],[195,80180,1732,144.33,0],[196,80180,1732,144.33,0],[197,56126,1212,101.03,0],[198,56126,1212,101.03,0],[199,80180,1732,144.32,0],[200,80180,1732,144.32,0],[201,80180,1732,144.32,0],[202,80180,1732,144.32,0],[203,80180,1732,144.32,0],[204,56126,1212,101.03,0],[205,56126,1212,101.03,0],[206,80180,1732,144.32,0],[207,80180,1732,144.32,0],[208,80180,1732,144.32,0],[209,80180,1732,144.32,0],[210,80180,1732,144.32,0],[211,56126,1212,101.03,0],[212,56126,1212,101.03,0],[213,80180,1732,144.32,0],[214,80180,1732,144.32,0],[215,80180,1732,144.32,0],[216,80180,1732,144.32,0],[217,80180,1732,144.32,0],[218,56126,1212,101.03,0],[219,56126,1212,101.03,0],[220,80180,1732,144.32,0],[221,80180,1732,144.32,0],[222,80180,1732,144.32,0],[223,80180,1732,144.32,0],[224,80180,1732,144.32,0],[225,56126,1212,101.03,0],[226,56126,1212,101.03,0],[227,80180,1732,144.32,0],[228,80180,1732,144.32,0],[229,80180,1732,144.32,0],[230,80180,1732,144.32,0],[231,80179,1732,144.32,0],[232,56126,1212,101.03,0],[233,56126,1212,101.03,0],[234,80179,1732,144.32,0],[235,80179,1732,144.32,0],[236,80179,1732,144.32,0],[237,80179,1732,144.32,0],[238,80179,1732,144.32,0],[239,56126,1212,101.03,0],[240,56126,1212,101.03,0],[241,80179,1732,144.32,0],[242,80179,1732,144.32,0]],"hasActuals":true,"outcomeLabel":"Clicks"},{"id":40990,"client":"SAF","name":"PHX_SAF_Fuliza_Launch_Sep2026","start":"2026-08-05","end":"2026-09-15","billing":"cpm","rate":1.8,"ctr":0.028,"budget":24000.0,"shape":"weekday","rows":[],"hasActuals":false,"targets":{"impressions":13333333,"clicks":373333,"downloads":0,"cpc":0.0642857142857143,"cpm":1.8,"cpd":0,"results":373333},"plan":[[369,347223,9723,625.0,0],[370,347222,9722,625.0,0],[371,347222,9722,625.0,0],[372,243056,6806,437.5,0],[373,243056,6806,437.5,0],[374,347222,9722,625.0,0],[375,347222,9722,625.0,0],[376,347222,9722,625.0,0],[377,347222,9722,625.0,0],[378,347222,9722,625.0,0],[379,243056,6806,437.5,0],[380,243056,6806,437.5,0],[381,347222,9722,625.0,0],[382,347222,9722,625.0,0],[383,347222,9722,625.0,0],[384,347222,9722,625.0,0],[385,347222,9722,625.0,0],[386,243056,6806,437.5,0],[387,243056,6806,437.5,0],[388,347222,9722,625.0,0],[389,347222,9722,625.0,0],[390,347222,9722,625.0,0],[391,347222,9722,625.0,0],[392,347222,9722,625.0,0],[393,243056,6806,437.5,0],[394,243056,6806,437.5,0],[395,347222,9722,625.0,0],[396,347222,9722,625.0,0],[397,347222,9722,625.0,0],[398,347222,9722,625.0,0],[399,347222,9722,625.0,0],[400,243056,6806,437.5,0],[401,243056,6806,437.5,0],[402,347222,9722,625.0,0],[403,347222,9722,625.0,0],[404,347222,9722,625.0,0],[405,347222,9722,625.0,0],[406,347222,9722,625.0,0],[407,243056,6806,437.5,0],[408,243056,6806,437.5,0],[409,347222,9722,625.0,0],[410,347222,9722,625.0,0]],"outcomeLabel":"Clicks"}],"today":"2026-08-04"};
+
+/* ---------- session (in memory only — never written to storage) ---------- */
+let SESSION = null;      // {token, email, name, role, clients:[{id,name}]}
+let RAW = null;          // payload for the currently viewed client
+let CURRENT = null;      // client id being viewed
+let knownIds = new Set();// campaign ids seen on the last load
+let lastHash = '';       // detects whether the sheet actually changed
+let lastFetch = 0, POLL = null, TICK = null;
+
+/* ---------- api ---------- */
+async function api(action, body){
+  if (!CONFIG.apiUrl) return demoApi(action, body);
+  const res = await fetch(CONFIG.apiUrl, {
+    method: 'POST',
+    redirect: 'follow',
+    // plain-text body keeps this a "simple" request, so the browser
+    // skips the CORS preflight that Apps Script cannot answer
+    body: JSON.stringify(Object.assign({action}, body)),
+  });
+  if (!res.ok) throw new Error('Server returned ' + res.status);
+  const out = await res.json();
+  if (!out.ok) throw new Error(out.error || 'Request failed');
+  return out;
+}
+
+/* ---------- demo backend (stands in for Apps Script) ---------- */
+const DEMO_USERS = {
+  'sarah@kcb.co.ke':                 {pw:'demo1234', name:'Sarah W.',  role:'client', clients:['KCB']},
+  'mike@safaricom.co.ke':            {pw:'demo1234', name:'Mike O.',   role:'client', clients:['SAF']},
+  'admin@digitalmediahawkers.com':   {pw:'demo1234', name:'DMH admin', role:'admin',  clients:['KCB','SAF']},
+};
+function demoApi(action, body){
+  return new Promise((resolve, reject) => setTimeout(() => {
+    if (action === 'login'){
+      const u = DEMO_USERS[(body.email || '').trim().toLowerCase()];
+      if (!u || u.pw !== body.password) return reject(new Error('Email or password is incorrect.'));
+      return resolve({ok:true, token:'demo', email:body.email.trim().toLowerCase(), name:u.name, role:u.role,
+        clients: DEMO.clients.filter(c => u.clients.includes(c.id)).map(c => ({id:c.id, name:c.name}))});
+    }
+    if (action === 'data'){
+      const u = DEMO_USERS[(body.email || '').toLowerCase()];
+      if (!u || !u.clients.includes(body.clientId)) return reject(new Error('Not authorised for that account.'));
+      const client = DEMO.clients.find(c => c.id === body.clientId);
+      // stands in for opening that client's own spreadsheet
+      return resolve({ok:true, startDate:DEMO.startDate, endDate:DEMO.endDate, today:DEMO.today || DEMO.endDate,
+        days:DEMO.days, fetchedAt:new Date().toISOString(),
+        client, campaigns: DEMO.campaigns.filter(c => c.client === body.clientId)});
+    }
+    reject(new Error('Unknown action'));
+  }, 260));
+}
+
+/* ---------- login ---------- */
+
+/* ---------------------------------------------------------------------
+   Session handoff.
+
+   Sign-in happens once, on index.html, which routes by role. This page
+   picks up that session, clears it from storage immediately so it cannot
+   be replayed, and sends anyone without one back to the front door.
+   --------------------------------------------------------------------- */
+function takeHandoff(){
+  let raw = null;
+  try { raw = sessionStorage.getItem('dmh.handoff'); sessionStorage.removeItem('dmh.handoff'); }
+  catch (err) { return null; }
+  if (!raw) return null;
+  try {
+    const h = JSON.parse(raw);
+    // A handoff is for the next page load, not for later.
+    if (!h.token || Date.now() - h.at > 30000) return null;
+    return h;
+  } catch (err) { return null; }
+}
+function goSignIn(){ window.location.replace('index.html'); }
+
+const app = document.getElementById('app');
+
+async function boot(){
+  const h = takeHandoff();
+  if (!h) return goSignIn();
+  SESSION = {token:h.token, email:h.email, name:h.name, role:h.role, clients:h.clients || []};
+  if (!SESSION.clients.length) return goSignIn();
+
+  document.getElementById('demoStrip').hidden = !!CONFIG.apiUrl;
+  document.getElementById('whoAmI').textContent = SESSION.name + ' · ' + SESSION.email;
+  const sw = document.getElementById('clientSwitch');
+  if (SESSION.clients.length > 1){
+    sw.hidden = false;
+    document.getElementById('clientName').hidden = true;
+    sw.innerHTML = SESSION.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    sw.onchange = () => loadClient(sw.value);
+  }
+  await loadClient(SESSION.clients[0].id);
+  startPolling();
+}
+function signOut(){
+  stopPolling();
+  SESSION = null; RAW = null; CURRENT = null; lastHash = ''; lastFetch = 0;
+  goSignIn();
+}
+document.getElementById('btnOut').addEventListener('click', () => signOut());
+boot();
+
+/* ---------- live loading ---------- */
+function setLive(mode, text){
+  const pill = document.getElementById('btnRefresh');
+  pill.classList.toggle('busy', mode === 'busy');
+  pill.classList.toggle('stale', mode === 'stale');
+  if (text) document.getElementById('liveLabel').textContent = text;
+}
+function tickLive(){
+  if (!lastFetch) return;
+  const s = Math.round((Date.now() - lastFetch)/1000);
+  const el = document.getElementById('btnRefresh');
+  if (el.classList.contains('busy') || el.classList.contains('stale')) return;
+  document.getElementById('liveLabel').textContent =
+    s < 10 ? 'Live' : s < 90 ? `Live · ${s}s ago` : `Live · ${Math.round(s/60)}m ago`;
+}
+function showError(msg){
+  document.getElementById('errText').textContent = msg;
+  document.getElementById('errBar').hidden = false;
+}
+function clearError(){ document.getElementById('errBar').hidden = true; }
+
+async function loadClient(clientId, opts){
+  opts = opts || {};
+  const {preserve = false, fresh = false, silent = false} = opts;
+  CURRENT = clientId;
+  if (!silent){ document.getElementById('wrap').style.opacity = .45; }
+  setLive('busy', 'Refreshing…');
+  try{
+    const r = await api('data', {token: SESSION.token, email: SESSION.email, clientId, fresh});
+    const hash = JSON.stringify(r.campaigns);
+    const changed = hash !== lastHash;
+    lastHash = hash; RAW = r; lastFetch = Date.now();
+    document.getElementById('clientName').textContent = r.client.name;
+    document.getElementById('partnerName').textContent = r.client.partner || CONFIG.partner;
+    document.getElementById('footPartner').textContent = r.client.partner || CONFIG.partner;
+    clearError();
+    // A silent poll that found nothing new leaves the view exactly as it is,
+    // so a client reading the table is never yanked mid-scroll.
+    if (preserve){ if (changed) refreshData(); }
+    else bootData();
+    setLive('ok'); tickLive();
+  }catch(e){
+    setLive('stale', 'Not updating');
+    showError(e.message || 'Could not reach the reporting service.');
+    if (/sign in again|session expired/i.test(e.message || '')) signOut();
+  }finally{
+    document.getElementById('wrap').style.opacity = 1;
+  }
+}
+
+function startPolling(){
+  stopPolling();
+  TICK = setInterval(tickLive, 5000);
+  if (!CONFIG.refreshSeconds) return;
+  POLL = setInterval(() => {
+    if (document.hidden || !SESSION) return;
+    loadClient(CURRENT, {preserve:true, silent:true});
+  }, CONFIG.refreshSeconds * 1000);
+}
+function stopPolling(){
+  if (POLL) clearInterval(POLL);
+  if (TICK) clearInterval(TICK);
+  POLL = TICK = null;
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && SESSION && Date.now() - lastFetch > 20000){
+    loadClient(CURRENT, {preserve:true, silent:true});
+  }
+});
+document.getElementById('btnRefresh').addEventListener('click', () => {
+  if (SESSION) loadClient(CURRENT, {preserve:true, fresh:true, silent:true});
+});
+document.getElementById('errRetry').addEventListener('click', () => {
+  if (SESSION) loadClient(CURRENT, {preserve:true, fresh:true});
+});
+
+/* =================================================================
+   DASHBOARD
+   ================================================================= */
+const DAY = 86400000;
+let D0, LAST;
+const toDate = i => new Date(D0.getTime() + i * DAY);
+const toIdx  = s => Math.round((new Date(s + 'T00:00:00') - D0) / DAY);
+const iso    = d => d.toISOString().slice(0,10);
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const nf0 = new Intl.NumberFormat('en-US');
+const nf2 = new Intl.NumberFormat('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+const nf4 = new Intl.NumberFormat('en-US', {minimumFractionDigits:4, maximumFractionDigits:4});
+const int   = v => nf0.format(Math.round(v));
+const money = v => nf2.format(v);
+const pct   = v => nf2.format(v) + '%';
+const compact = v => { const a = Math.abs(v);
+  if (a >= 1e9) return (v/1e9).toFixed(a>=1e10?0:1)+'B';
+  if (a >= 1e6) return (v/1e6).toFixed(a>=1e7?0:1)+'M';
+  if (a >= 1e3) return (v/1e3).toFixed(a>=1e4?0:1)+'K';
+  return String(Math.round(v)); };
+const dLabel = d => `${MON[d.getMonth()]} ${d.getDate()}`;
+
+const METRICS = {
+  results:     {label:'Result',      color:'#2C5CF6', fmt:int, axis:compact},
+  impressions: {label:'Impressions', color:'#17203A', fmt:int, axis:compact},
+  clicks:      {label:'Clicks',      color:'#7A5AF8', fmt:int, axis:compact},
+  ctr:         {label:'CTR',         color:'#FF8A3D', fmt:pct, axis:v => v.toFixed(1)+'%'},
+  spend:       {label:'Spend',       color:'#E2447B', fmt:v => '$'+money(v), axis:v => '$'+compact(v)},
+  downloads:   {label:'Conversions', color:'#0E9F8E', fmt:int, axis:compact},
+};
+const MKEYS = Object.keys(METRICS);
+
+/** Index of today in the shared series — the series may run past it. */
+function todayIdx(){
+  const t = RAW && (RAW.today || RAW.endDate);
+  if (!t) return LAST;
+  return Math.max(0, Math.min(LAST, toIdx(t)));
+}
+
+const state = {
+  selected:new Set(), focus:null, from:0, to:0,
+  active:['impressions','ctr'], gran:'day', sort:{k:'impressions', dir:-1}, preset:null,
+  view:'pacing',   // projected | delivered | pacing
+};
+
+/** Does anything in scope actually have delivery reported by the partner? */
+function anyActuals(){ return RAW.campaigns.some(c => c.rows && c.rows.length); }
+
+/** A campaign is ended, running, or not started yet — ISO strings compare correctly. */
+function statusOf(c){
+  const today = RAW.today || RAW.endDate;
+  if (c.end < today) return 'ended';
+  if (c.start > today) return 'soon';
+  return 'live';
+}
+const STATUS_LABEL = {ended:'Ended', live:'Live', soon:'Scheduled'};
+
+/**
+ * What the budget buys, and therefore what an outcome is called. A client can
+ * hold a mix, so the shared columns fall back to the neutral word.
+ */
+const BILLING = {
+  cpm: {outcome:'clicks',      label:'Clicks',    one:'click'},
+  cpc: {outcome:'clicks',      label:'Clicks',    one:'click'},
+  cpi: {outcome:'conversions', label:'Installs',  one:'install'},
+  cpd: {outcome:'conversions', label:'Downloads', one:'download'},
+};
+const billingOf = b => BILLING[String(b || 'cpm').toLowerCase()] ? String(b).toLowerCase() : 'cpm';
+
+/** 'Installs', 'Downloads', or 'Conversions' when the selection is mixed. */
+function convLabel(){
+  const words = new Set(RAW.campaigns.filter(c => state.selected.has(c.id))
+    .map(c => BILLING[billingOf(c.billing)].label)
+    .filter(w => w !== 'Clicks'));
+  return words.size === 1 ? [...words][0] : 'Conversions';
+}
+
+/* ---------- maths ---------- */
+function derive(a){
+  const {impressions, clicks, spend, downloads, results} = a;
+  return {impressions, clicks, downloads, spend, results,
+    ctr: impressions ? clicks/impressions*100 : null,
+    cpm: impressions ? spend/impressions*1000 : 0,
+    cpc: clicks ? spend/clicks : 0,
+    cpa: downloads ? spend/downloads : 0};
+}
+const blank = () => ({impressions:0, clicks:0, spend:0, downloads:0, results:0});
+function add(acc, c, r){
+  acc.impressions += r[1]; acc.clicks += r[2]; acc.spend += r[3]; acc.downloads += r[4];
+  // the result is whatever the buy was for
+  acc.results += BILLING[billingOf(c.billing)].outcome === 'conversions' ? r[4] : r[2];
+}
+/**
+ * One row per campaign, carrying BOTH series side by side:
+ *   d.*  delivered — reported by the media partner
+ *   p.*  projected — modelled from budget and rate, never measured
+ * They are aggregated separately and never merged.
+ */
+function campaignRows(){
+  const {from, to} = state;
+  const today = RAW.today || RAW.endDate;
+  return RAW.campaigns.filter(c => state.selected.has(c.id)).map(c => {
+    const da = blank(), pa = blank(), ptd = blank();
+    let hasD = false, hasP = false;
+    for (const r of (c.rows || [])) if (r[0] >= from && r[0] <= to){ add(da, c, r); hasD = true; }
+    for (const r of (c.plan || [])){
+      if (r[0] < from || r[0] > to) continue;
+      add(pa, c, r); hasP = true;
+      if (iso(toDate(r[0])) <= today) add(ptd, c, r);   // projected so far, for pacing
+    }
+    if (!hasD && !hasP) return null;
+    const d = derive(da), p = derive(pa), toDateP = derive(ptd);
+    return {
+      id:c.id, name:c.name, status:statusOf(c), start:c.start, end:c.end,
+      billing:c.billing, rate:c.rate, hasD, hasP,
+      d, p, ptd:toDateP,
+      pacing: toDateP.impressions ? d.impressions / toDateP.impressions * 100 : null,
+    };
+  }).filter(Boolean);
+}
+
+/** Flatten a campaign row to whichever series the current view shows. */
+function seriesOf(r){ return state.view === 'projected' ? r.p : r.d; }
+function buckets(which){
+  const {from, to, gran} = state;
+  const ids = state.focus ? new Set([state.focus]) : state.selected;
+  const daily = new Map();
+  for (const c of RAW.campaigns){
+    if (!ids.has(c.id)) continue;
+    for (const r of (which === 'plan' ? (c.plan || []) : (c.rows || []))){
+      if (r[0] < from || r[0] > to) continue;
+      let a = daily.get(r[0]); if (!a){ a = blank(); daily.set(r[0], a); }
+      add(a, c, r);
+    }
+  }
+  const out = [], push = (date, a) => out.push(Object.assign({date}, derive(a)));
+  const merge = (t, s) => { for (const k in s) t[k] += s[k]; return t; };
+  if (gran === 'day'){
+    for (let d = from; d <= to; d++) push(toDate(d), daily.get(d) || blank());
+  } else if (gran === 'week'){
+    for (let s = from; s <= to; s += 7){
+      const a = blank();
+      for (let d = s; d <= Math.min(s+6, to); d++) if (daily.has(d)) merge(a, daily.get(d));
+      push(toDate(s), a);
+    }
+  } else {
+    const m = new Map();
+    for (let d = from; d <= to; d++){
+      const dt = toDate(d), key = dt.getFullYear()+'-'+dt.getMonth();
+      let e = m.get(key); if (!e){ e = {date:new Date(dt.getFullYear(), dt.getMonth(), 1), a:blank()}; m.set(key, e); }
+      if (daily.has(d)) merge(e.a, daily.get(d));
+    }
+    for (const [,e] of m) push(e.date, e.a);
+  }
+  return out;
+}
+
+/* ---------- campaign picker ---------- */
+const msPanel = document.getElementById('msPanel'), msList = document.getElementById('msList');
+function buildPicker(){
+  msList.innerHTML = '';
+  for (const c of RAW.campaigns){
+    const row = document.createElement('label');
+    row.className = 'ms-item';
+    const st = statusOf(c);
+    row.innerHTML = `<input type="checkbox" ${state.selected.has(c.id)?'checked':''}>
+      <span>${c.name}<span class="badge ${st}">${STATUS_LABEL[st]}</span></span>
+      <span class="cid">${c.id}</span>`;
+    row.querySelector('input').addEventListener('change', e => {
+      e.target.checked ? state.selected.add(c.id) : state.selected.delete(c.id);
+      if (state.focus && !state.selected.has(state.focus)) state.focus = null;
+      render();
+    });
+    msList.appendChild(row);
+  }
+}
+document.getElementById('msToggle').addEventListener('click', e => {
+  e.stopPropagation();
+  e.currentTarget.setAttribute('aria-expanded', msPanel.classList.toggle('open'));
+});
+document.addEventListener('click', e => { if (!e.target.closest('.ms')) msPanel.classList.remove('open'); });
+document.getElementById('msAll').addEventListener('click', () => {
+  RAW.campaigns.forEach(c => state.selected.add(c.id)); buildPicker(); render(); });
+document.getElementById('msNone').addEventListener('click', () => {
+  state.selected.clear(); state.focus = null; buildPicker(); render(); });
+
+/* ---------- dates ---------- */
+const fromEl = document.getElementById('fromDate'), toEl = document.getElementById('toDate');
+function syncDateInputs(){
+  fromEl.value = iso(toDate(state.from)); toEl.value = iso(toDate(state.to));
+  fromEl.min = toEl.min = RAW.startDate; fromEl.max = toEl.max = RAW.endDate;
+}
+function applyPreset(v){
+  state.preset = v;
+  const now = todayIdx();
+  if (v === 'all'){ state.from = 0; state.to = LAST; }
+  else if (v === 'month'){
+    const t = toDate(now);
+    state.from = Math.max(0, toIdx(iso(new Date(t.getFullYear(), t.getMonth(), 1)))); state.to = now;
+  } else { state.to = now; state.from = Math.max(0, now - (v-1)); }
+  const span = state.to - state.from;
+  state.gran = span > 120 ? 'month' : span > 45 ? 'week' : 'day';
+  syncDateInputs(); render();
+}
+document.getElementById('presets').addEventListener('click', e => {
+  const b = e.target.closest('.preset'); if (!b) return;
+  const v = b.dataset.days;
+  applyPreset(v === 'all' || v === 'month' ? v : +v);
+});
+document.getElementById('btnRun').addEventListener('click', () => {
+  let a = toIdx(fromEl.value), b = toIdx(toEl.value);
+  if (isNaN(a) || isNaN(b)) return;
+  if (a > b) [a, b] = [b, a];
+  state.from = Math.max(0, Math.min(a, LAST)); state.to = Math.max(0, Math.min(b, LAST));
+  state.preset = null; syncDateInputs(); render();
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  state.selected = new Set(RAW.campaigns.map(c => c.id));
+  state.focus = null; state.active = ['impressions','ctr']; state.sort = {k:'impressions', dir:-1};
+  buildPicker(); applyPreset(7);
+});
+
+/* ---------- cards ---------- */
+const cardsEl = document.getElementById('cards');
+function buildCards(){
+  cardsEl.innerHTML = '';
+  for (const k of MKEYS){
+    const m = METRICS[k], b = document.createElement('button');
+    b.className = 'card'; b.dataset.k = k; b.style.setProperty('--c', m.color);
+    b.innerHTML = `<span class="card-top"><i class="swatch"></i><span class="card-label">${m.label}</span></span>
+      <span class="card-val">—</span><svg class="spark" viewBox="0 0 120 24" preserveAspectRatio="none"></svg>
+      <span class="axis-tag" hidden></span>`;
+    b.addEventListener('click', () => {
+      const i = state.active.indexOf(k);
+      if (i > -1){ if (state.active.length > 1) state.active.splice(i,1); }
+      else { state.active.push(k); if (state.active.length > 2) state.active.shift(); }
+      render();
+    });
+    cardsEl.appendChild(b);
+  }
+}
+function paintCards(rows, totals){
+  const n = rows.length;
+  const word = convLabel();
+  for (const el of cardsEl.children){
+    const k = el.dataset.k, m = METRICS[k], on = state.active.indexOf(k);
+    if (k === 'downloads') el.querySelector('.card-label').textContent = word;
+    el.classList.toggle('on', on > -1);
+    el.querySelector('.card-val').textContent = totals[k] == null ? '—' : m.fmt(totals[k]);
+    const tag = el.querySelector('.axis-tag');
+    tag.hidden = on < 0; tag.textContent = on === 0 ? 'L' : 'R';
+    const sp = el.querySelector('.spark');
+    const vals = rows.map(r => r[k] == null ? 0 : r[k]);
+    if (n < 2 || !vals.some(v => v > 0)){ sp.innerHTML = ''; continue; }
+    const mx = Math.max(...vals), mn = Math.min(...vals, 0);
+    const sx = i => i/(n-1)*120, sy = v => 22 - (v-mn)/((mx-mn)||1)*20;
+    const line = vals.map((v,i) => `${i?'L':'M'}${sx(i).toFixed(1)},${sy(v).toFixed(1)}`).join(' ');
+    sp.innerHTML = `<path d="${line} L120,24 L0,24 Z" fill="${m.color}" opacity="${on>-1?.13:.07}"></path>
+      <path d="${line}" fill="none" stroke="${m.color}" stroke-width="1.5" opacity="${on>-1?1:.42}"
+        stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>`;
+  }
+}
+
+/* ---------- chart ---------- */
+const svg = document.getElementById('chart'), tip = document.getElementById('tip'), box = document.getElementById('chartBox');
+let CH = {n:0};
+function drawChart(rows, planRows){
+  const W = Math.max(560, box.clientWidth - 24), H = 300;
+  const rightAxis = state.active.length > 1;
+  const P = {t:16, r: rightAxis ? 58 : 22, b:34, l:56};
+  const iw = W - P.l - P.r, ih = H - P.t - P.b, n = rows.length;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  if (!n){
+    svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="#98A1B5"
+      font-family="Inter,sans-serif" font-size="13">No data in this range</text>`;
+    CH = {n:0}; return;
+  }
+  const scales = state.active.map((k, si) => {
+    let vals = rows.map(r => r[k]).filter(v => v != null && isFinite(v));
+    if (si === 0 && planRows && state.view !== 'delivered'){
+      vals = vals.concat(planRows.map(r => r[k]).filter(v => v != null && isFinite(v)));
+    }
+    let mx = vals.length ? Math.max(...vals) : 1; if (mx <= 0) mx = 1;
+    const pow = Math.pow(10, Math.floor(Math.log10(mx)));
+    return {k, max: Math.ceil(mx/pow*1.06)*pow};
+  });
+  const x = i => P.l + (n === 1 ? iw/2 : i/(n-1)*iw);
+  const y = (v, s) => P.t + ih - (v == null ? 0 : Math.min(v, s.max))/s.max*ih;
+
+  let g = ''; const T = 4;
+  for (let t = 0; t <= T; t++){
+    const yy = P.t + ih - t/T*ih;
+    g += `<line x1="${P.l}" y1="${yy}" x2="${P.l+iw}" y2="${yy}" stroke="${t?'#EFF2F8':'#E2E7F0'}"></line>`;
+    g += `<text x="${P.l-10}" y="${yy+4}" text-anchor="end" fill="${METRICS[scales[0].k].color}"
+      font-family="Inter,sans-serif" font-size="11">${METRICS[scales[0].k].axis(t/T*scales[0].max)}</text>`;
+    if (rightAxis) g += `<text x="${P.l+iw+10}" y="${yy+4}" fill="${METRICS[scales[1].k].color}"
+      font-family="Inter,sans-serif" font-size="11">${METRICS[scales[1].k].axis(t/T*scales[1].max)}</text>`;
+  }
+  const step = Math.max(1, Math.ceil(n/13));
+  for (let i = 0; i < n; i += step){
+    const d = rows[i].date;
+    const lab = state.gran === 'month' ? `${MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` : dLabel(d);
+    g += `<text x="${x(i)}" y="${P.t+ih+20}" text-anchor="middle" fill="#98A1B5"
+      font-family="Inter,sans-serif" font-size="11">${lab}</text>`;
+  }
+  // Projected line first, dashed and amber, so the solid delivered line reads
+  // as the real one. Only drawn when the view includes the projection.
+  if (planRows && planRows.length === n && state.view !== 'delivered'){
+    const s = scales[0], m = METRICS[s.k];
+    const pp = planRows.map((r,i) => [x(i), y(r[s.k], s)]);
+    const pl = pp.map((p,i) => `${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+    g += `<path d="${pl}" fill="none" stroke="#FF8A3D" stroke-width="1.8" stroke-dasharray="6 4"
+      stroke-linejoin="round" stroke-linecap="round" opacity="${state.view === 'projected' ? 1 : .85}"></path>`;
+  }
+  scales.forEach((s, si) => {
+    const m = METRICS[s.k];
+    const pts = rows.map((r,i) => [x(i), y(r[s.k], s)]);
+    const line = pts.map((p,i) => `${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+    if (si === 0){
+      g += `<defs><linearGradient id="fill0" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${m.color}" stop-opacity=".20"></stop>
+        <stop offset="100%" stop-color="${m.color}" stop-opacity="0"></stop></linearGradient></defs>
+        <path d="${line} L${pts[n-1][0].toFixed(1)},${P.t+ih} L${pts[0][0].toFixed(1)},${P.t+ih} Z" fill="url(#fill0)"></path>`;
+    }
+    g += `<path d="${line}" fill="none" stroke="${m.color}" stroke-width="${si?1.8:2.2}"
+      stroke-linejoin="round" stroke-linecap="round" ${si?'stroke-dasharray="5 4"':''}></path>`;
+    if (n <= 45) pts.forEach(p => { g += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6"
+      fill="#fff" stroke="${m.color}" stroke-width="1.6"></circle>`; });
+  });
+  g += `<line id="guide" x1="0" y1="${P.t}" x2="0" y2="${P.t+ih}" stroke="#0C1222" opacity="0" stroke-dasharray="3 3"></line>`;
+  svg.innerHTML = g;
+  CH = {rows, x, W, P, iw, n, plan: planRows};
+}
+box.addEventListener('mousemove', e => {
+  if (!CH.n) return;
+  const r = svg.getBoundingClientRect();
+  const sx = (e.clientX - r.left)/r.width*CH.W;
+  let i = CH.n === 1 ? 0 : Math.round((sx - CH.P.l)/CH.iw*(CH.n-1));
+  i = Math.max(0, Math.min(CH.n-1, i));
+  const row = CH.rows[i], guide = svg.querySelector('#guide');
+  if (guide){ guide.setAttribute('x1', CH.x(i)); guide.setAttribute('x2', CH.x(i)); guide.setAttribute('opacity', '.28'); }
+  const d = row.date;
+  const dl = state.gran === 'month' ? `${MON[d.getMonth()]} ${d.getFullYear()}`
+    : state.gran === 'week' ? `Week of ${dLabel(d)}` : `${dLabel(d)}, ${d.getFullYear()}`;
+  let html = `<div class="tip-date">${dl}</div>`;
+  if (state.view !== 'projected'){
+    html += state.active.map(k => {
+      const m = METRICS[k];
+      return `<div class="tip-row"><i style="background:${m.color}"></i>${m.label} delivered` +
+        `<b>${row[k]==null?'—':m.fmt(row[k])}</b></div>`;
+    }).join('');
+  }
+  if (CH.plan && CH.plan[i] && state.view !== 'delivered'){
+    const k = state.active[0], m = METRICS[k], pv = CH.plan[i][k];
+    html += `<div class="tip-row"><i style="background:#FF8A3D"></i>${m.label} projected` +
+      `<b>${pv==null?'—':m.fmt(pv)}</b></div>`;
+  }
+  tip.innerHTML = html;
+  tip.style.opacity = 1;
+  tip.style.left = (CH.x(i)/CH.W*r.width + 12) + 'px';
+  tip.style.top = (CH.P.t + 46) + 'px';
+});
+box.addEventListener('mouseleave', () => {
+  tip.style.opacity = 0;
+  const g = svg.querySelector('#guide'); if (g) g.setAttribute('opacity', 0);
+});
+
+/* ---------- table ---------- */
+const tbody = document.getElementById('tbody'), tfoot = document.getElementById('tfoot');
+const thead = document.querySelector('#tbl thead');
+
+/**
+ * Column sets per view. Projected columns are labelled and tinted so a
+ * modelled figure can never be read as a measured one.
+ */
+const COLS = {
+  projected: [
+    {k:'name',  label:'Campaign name'},
+    {k:'id',    label:'Campaign ID'},
+    {k:'p.impressions', label:'Impressions', proj:true, fmt:int},
+    {k:'p.clicks',      label:'Clicks',      proj:true, fmt:int},
+    {k:'p.ctr',         label:'CTR',         proj:true, fmt:v => v==null?'–':pct(v)},
+    {k:'p.spend',       label:'Spend',       proj:true, fmt:money},
+    {k:'p.cpm',         label:'CPM',         proj:true, fmt:money},
+    {k:'p.cpc',         label:'CPC',         proj:true, fmt:v => nf4.format(v)},
+    {k:'p.downloads',   label:'@conv',       proj:true, fmt:int, conv:true},
+    {k:'p.cpa',         label:'Cost per @one', proj:true, fmt:v => nf4.format(v), conv:true},
+  ],
+  delivered: [
+    {k:'name',  label:'Campaign name'},
+    {k:'id',    label:'Campaign ID'},
+    {k:'d.impressions', label:'Impressions', fmt:int},
+    {k:'d.clicks',      label:'Clicks',      fmt:int},
+    {k:'d.ctr',         label:'CTR',         fmt:v => v==null?'–':pct(v)},
+    {k:'d.spend',       label:'Spend',       fmt:money},
+    {k:'d.cpm',         label:'CPM',         fmt:money},
+    {k:'d.cpc',         label:'CPC',         fmt:v => nf4.format(v)},
+    {k:'d.downloads',   label:'@conv',       fmt:int, conv:true},
+    {k:'d.cpa',         label:'Cost per @one', fmt:v => nf4.format(v), conv:true},
+  ],
+  pacing: [
+    {k:'name',  label:'Campaign name'},
+    {k:'id',    label:'Campaign ID'},
+    {k:'d.impressions',   label:'Impressions delivered', fmt:int},
+    {k:'ptd.impressions', label:'Impressions projected to date', proj:true, fmt:int},
+    {k:'pacing',          label:'Pacing', fmt:v => v==null?'–':pct(v), pace:true},
+    {k:'d.clicks',        label:'Clicks delivered', fmt:int},
+    {k:'ptd.clicks',      label:'Clicks projected to date', proj:true, fmt:int},
+    {k:'d.ctr',           label:'CTR delivered', fmt:v => v==null?'–':pct(v)},
+    {k:'d.spend',         label:'Spend delivered', fmt:money},
+    {k:'ptd.spend',       label:'Spend projected to date', proj:true, fmt:money},
+  ],
+};
+const dig = (row, k) => k.includes('.') ? (row[k.split('.')[0]] || {})[k.split('.')[1]] : row[k];
+
+/** Columns for the current view, with outcome words filled in. */
+function activeCols(){
+  const word = convLabel();
+  const anyConv = RAW.campaigns.some(c => state.selected.has(c.id) &&
+    BILLING[billingOf(c.billing)].outcome === 'conversions');
+  return COLS[state.view]
+    .filter(c => !c.conv || anyConv)
+    .map(c => c.conv
+      ? Object.assign({}, c, {label: c.label.replace('@conv', word)
+          .replace('@one', word.toLowerCase().replace(/s$/, ''))})
+      : c);
+}
+
+function paintHead(){
+  const cols = activeCols();
+  if (!cols.some(c => c.k === state.sort.k)) state.sort = {k:cols[2].k, dir:-1};
+  document.getElementById('thRow').innerHTML = cols.map(c => {
+    const on = c.k === state.sort.k;
+    return `<th data-k="${c.k}" class="${on?'sorted ':''}${c.proj?'col-proj':''}">${c.label}` +
+      `<span class="arrow">${on ? (state.sort.dir>0?'▲':'▼') : '▼'}</span></th>`;
+  }).join('');
+}
+thead.addEventListener('click', e => {
+  const th = e.target.closest('th'); if (!th || !th.dataset.k) return;
+  const k = th.dataset.k;
+  state.sort = state.sort.k === k ? {k, dir:-state.sort.dir} : {k, dir: k === 'name' ? 1 : -1};
+  render();
+});
+
+/* ---------- view switch ---------- */
+document.getElementById('views').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  state.view = b.dataset.v;
+  render();
+});
+function paceClass(v){
+  if (v == null) return '';
+  return v < 90 ? ' under' : v > 110 ? ' over' : ' on';
+}
+
+function paintTable(rows, totals){
+  paintHead();
+  const cols = activeCols();
+  const {k, dir} = state.sort;
+  const sorted = [...rows].sort((a,b) => {
+    const va = dig(a,k), vb = dig(b,k);
+    if (typeof va === 'string') return va.localeCompare(vb)*dir;
+    return ((va == null ? -1 : va) - (vb == null ? -1 : vb))*dir;
+  });
+  document.getElementById('tblEmpty').hidden = !!sorted.length;
+
+  tbody.innerHTML = sorted.map(r => '<tr data-id="' + r.id + '" class="' +
+    (state.focus === r.id ? 'picked' : '') + '">' + cols.map(c => {
+      if (c.k === 'name') return `<td><span class="cname">${r.name}</span>` +
+        `<span class="badge ${r.status}">${STATUS_LABEL[r.status]}</span></td>`;
+      if (c.k === 'id') return `<td class="cid-cell">${r.id}</td>`;
+      const v = dig(r, c.k);
+      const cls = [c.proj ? 'col-proj' : '', c.pace ? 'pace-cell' + paceClass(v) : '',
+                   (v == null || v === 0) && !c.pace ? 'zero' : ''].filter(Boolean).join(' ');
+      return `<td${cls ? ' class="' + cls + '"' : ''}>${v == null ? '–' : c.fmt(v)}</td>`;
+    }).join('') + '</tr>').join('');
+
+  tfoot.innerHTML = sorted.length ? '<tr>' + cols.map((c, i) => {
+    if (c.k === 'name') return '<td>Total</td>';
+    if (c.k === 'id') return '<td></td>';
+    const v = dig(totals, c.k);
+    const cls = [c.proj ? 'col-proj' : '', c.pace ? 'pace-cell' + paceClass(v) : ''].filter(Boolean).join(' ');
+    return `<td${cls ? ' class="' + cls + '"' : ''}>${v == null ? '–' : c.fmt(v)}</td>`;
+  }).join('') + '</tr>' : '';
+  tbody.querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => {
+    const id = +tr.dataset.id;
+    state.focus = state.focus === id ? null : id;
+    render();
+  }));
+}
+
+document.getElementById('gran').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.gran = b.dataset.g; render();
+});
+let rz; window.addEventListener('resize', () => {
+  clearTimeout(rz);
+  rz = setTimeout(() => { if (RAW) drawChart(buckets('actual'), buckets('plan')); }, 120);
+});
+
+/* ---------- render ---------- */
+function sumSeries(rows, key){
+  const a = blank();
+  for (const r of rows){
+    const x = r[key];
+    a.impressions += x.impressions; a.clicks += x.clicks; a.downloads += x.downloads;
+    a.spend += x.spend; a.results += x.results;
+  }
+  return derive(a);
+}
+
+function render(){
+  const rows = campaignRows();
+  const d = sumSeries(rows, 'd'), pr = sumSeries(rows, 'p'), ptd = sumSeries(rows, 'ptd');
+  const tot = {
+    d, p: pr, ptd,
+    pacing: ptd.impressions ? d.impressions / ptd.impressions * 100 : null,
+    name: 'Total', id: '',
+  };
+  const cardTotals = state.view === 'projected' ? pr : d;
+  const series = buckets('actual'), planSeries = buckets('plan');
+
+  const nSel = state.selected.size, nAll = RAW.campaigns.length;
+  document.getElementById('msLabel').textContent =
+    nSel === 0 ? 'No campaigns' : nSel === nAll ? 'All campaigns' :
+    nSel === 1 ? RAW.campaigns.find(c => state.selected.has(c.id)).name : `${nSel} campaigns`;
+  [...document.getElementById('presets').children].forEach(b => {
+    const v = b.dataset.days;
+    b.classList.toggle('active', state.preset === (v === 'all' || v === 'month' ? v : +v));
+  });
+  [...document.getElementById('gran').children].forEach(b => b.classList.toggle('active', b.dataset.g === state.gran));
+
+  document.getElementById('tableNote').textContent =
+    `${iso(toDate(state.from))} → ${iso(toDate(state.to))} · ${rows.length} live campaign${rows.length===1?'':'s'}`;
+  // View switch: delivered and pacing are unavailable until the partner
+  // reports something, so the client is never shown an empty "delivered" table.
+  const haveActuals = anyActuals();
+  if (!haveActuals) state.view = 'projected';
+  [...document.getElementById('views').children].forEach(b => {
+    b.classList.toggle('active', b.dataset.v === state.view);
+    b.disabled = !haveActuals && b.dataset.v !== 'projected';
+  });
+
+  const projBar = document.getElementById('projBar');
+  if (state.view === 'delivered'){
+    projBar.hidden = true;
+  } else {
+    projBar.hidden = false;
+    document.getElementById('projText').innerHTML = state.view === '-'
+      ? 'from the campaign budget ' +
+        'and the contracted rate at a click-through rate ' +
+        'deliverd ' +
+        (haveActuals ? 'Switch to Delivered for the figures reported by ' + (RAW.client.partner || 'the media partner') + '.'
+                     : 'No delivery has been reported for this account yet.')
+      : '<b>Amber columns and the dashed line are projections</b>from budget and rate, not measured. ' +
+        'Figures marked delivered come from ' + (RAW.client.partner || 'the media partner') + '. ' +
+        'Pacing compares the two.';
+  }
+
+  const f = state.focus && RAW.campaigns.find(c => c.id === state.focus);
+  document.getElementById('scopeHint').textContent = f ? `Filtered to ${f.name} — click the row again to clear` : 'All selected campaigns';
+  document.getElementById('chartNote').textContent =
+    state.active.map(k => METRICS[k].label).join(' vs ') +
+    (state.view === 'projected' ? ' · projected' :
+     state.view === 'delivered' ? ' · delivered' : ' · solid delivered, dashed projected');
+
+  let spendAll = 0;
+  const src = state.view === 'projected' ? 'plan' : 'rows';
+  for (const c of RAW.campaigns) if (state.selected.has(c.id)) for (const r of (c[src] || [])) spendAll += r[3];
+  const budget = RAW.client.budget || 0;
+  const p = budget ? Math.min(100, spendAll/budget*100) : 0;
+  document.getElementById('paceSpend').textContent = '$' + money(spendAll);
+  document.getElementById('paceBudget').textContent = '$' + int(budget);
+  document.getElementById('paceFill').style.width = p + '%';
+  document.getElementById('pacePct').textContent = p.toFixed(1) + '%';
+  const ends = RAW.campaigns.filter(c => state.selected.has(c.id)).map(c => +new Date(c.end + 'T00:00:00'));
+  const left = ends.length ? Math.round((Math.max(...ends) - toDate(LAST))/DAY) : 0;
+  document.getElementById('paceDays').textContent = left > 0 ? `${left} days of flight remaining` : 'Flight complete';
+
+  paintTable(rows, tot);
+  paintCards(state.view === 'projected' ? planSeries : series, cardTotals);
+  drawChart(series, planSeries);
+}
+
+function bootData(){
+  D0 = new Date(RAW.startDate + 'T00:00:00');
+  LAST = RAW.days - 1;
+  state.selected = new Set(RAW.campaigns.map(c => c.id));
+  knownIds = new Set(RAW.campaigns.map(c => c.id));
+  state.focus = null;
+  state.active = ['impressions','ctr'];
+  state.view = anyActuals() ? 'pacing' : 'projected';
+  state.sort = {k: state.view === 'projected' ? 'p.impressions' : 'd.impressions', dir:-1};
+  buildPicker(); buildCards();
+  // open on the eight days up to today — the series itself may run further,
+  // since a booked campaign's projection extends into the future
+  const now = todayIdx();
+  state.from = Math.max(0, now - 7); state.to = now; state.preset = null; state.gran = 'day';
+  syncDateInputs(); render();
+}
+
+/**
+ * Fold a fresh read of the sheet into the view the client is already looking
+ * at: same date window, same selection, same sort. Only genuinely new things
+ * — a campaign added in the sheet, or another day of delivery — change.
+ */
+function refreshData(){
+  const prevFrom = D0 ? iso(toDate(state.from)) : null;
+  const prevTo   = D0 ? iso(toDate(state.to)) : null;
+  const wasFollowingLatest = D0 ? state.to >= todayIdx() : true;
+
+  D0 = new Date(RAW.startDate + 'T00:00:00');
+  LAST = RAW.days - 1;
+  const clamp = v => Math.max(0, Math.min(isNaN(v) ? 0 : v, LAST));
+  state.from = clamp(prevFrom ? toIdx(prevFrom) : 0);
+  state.to   = wasFollowingLatest ? todayIdx() : clamp(prevTo ? toIdx(prevTo) : todayIdx());
+  if (state.from > state.to) state.from = state.to;
+
+  const ids = new Set(RAW.campaigns.map(c => c.id));
+  state.selected.forEach(id => { if (!ids.has(id)) state.selected.delete(id); });
+  RAW.campaigns.forEach(c => { if (!knownIds.has(c.id)) state.selected.add(c.id); });
+  knownIds = ids;
+  if (state.focus && !ids.has(state.focus)) state.focus = null;
+
+  buildPicker(); syncDateInputs(); render();
+}
+</script>
+</body>
+</html>

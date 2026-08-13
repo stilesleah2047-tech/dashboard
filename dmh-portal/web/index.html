@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — Digital Media Hawkers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0C1222; --muted:#8E97AE; --line:#E2E7F0; --canvas:#F4F6FB;
+  --blue:#2C5CF6; --amber:#FF8A3D; --rose:#E2447B; --violet:#7A5AF8;
+  --radius-sm:9px;
+  --display:'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --body:'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  min-height:100vh; display:grid; place-items:center; padding:28px;
+  font-family:var(--body); font-size:14px; color:#fff; -webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(900px 500px at 82% -12%, rgba(122,90,248,.32), transparent 62%),
+    radial-gradient(760px 460px at 4% 112%, rgba(255,138,61,.26), transparent 62%),
+    var(--ink);
+}
+button,input{font-family:inherit; font-size:inherit; color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue); outline-offset:2px; border-radius:4px}
+[hidden]{display:none !important}
+
+.card{width:100%; max-width:392px}
+.brand{display:flex; align-items:center; gap:13px; margin-bottom:28px}
+.mark{
+  width:38px; height:38px; border-radius:10px; display:grid; place-items:center; flex:none;
+  background:linear-gradient(145deg,var(--amber),var(--rose) 55%,var(--violet));
+  font-family:var(--display); font-weight:700; font-size:15px;
+}
+.brand .n{font-family:var(--display); font-weight:600; font-size:17px; letter-spacing:-.02em}
+.brand .s{font-size:11px; color:var(--muted); letter-spacing:.09em; text-transform:uppercase; margin-top:1px}
+
+.box{background:#fff; color:var(--ink); border-radius:16px; padding:30px;
+  box-shadow:0 30px 70px -30px rgba(0,0,0,.7)}
+.box h1{font-family:var(--display); font-size:20px; font-weight:600; letter-spacing:-.02em; margin:0 0 5px}
+.box .sub{color:#69728A; font-size:13px; margin:0 0 24px}
+.f{margin-bottom:15px}
+.f label{display:block; font-size:11px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; color:#98A1B5; margin-bottom:6px}
+.f input{width:100%; height:44px; padding:0 13px; border:1px solid var(--line);
+  border-radius:var(--radius-sm); background:#fff}
+.f input:hover{border-color:#CBD3E2}
+.submit{width:100%; height:46px; margin-top:10px; background:var(--ink); color:#fff;
+  border:none; border-radius:var(--radius-sm); font-weight:600; font-size:14.5px;
+  display:flex; align-items:center; justify-content:center; gap:9px}
+.submit:hover{background:#1B2540}
+.submit:disabled{opacity:.65; cursor:progress}
+.spin{width:15px; height:15px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff;
+  border-radius:50%; animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err{background:#FEF2F4; color:#B4243F; border:1px solid #F9D4DC; border-radius:8px;
+  padding:10px 13px; font-size:12.5px; margin-bottom:16px; line-height:1.5}
+.ok{background:#E9F8F3; color:#0B6B58; border:1px solid #C4E9DD; border-radius:8px;
+  padding:11px 13px; font-size:12.8px; margin-bottom:16px; line-height:1.5;
+  display:flex; align-items:center; gap:9px}
+.ok b{font-family:var(--display); font-weight:600}
+.note{margin-top:20px; padding-top:17px; border-top:1px solid #EFF2F8; font-size:12px; color:#69728A}
+.note b{font-family:var(--display); color:var(--ink); display:block; margin-bottom:6px;
+  font-size:11px; letter-spacing:.07em; text-transform:uppercase}
+code{background:var(--canvas); border:1px solid var(--line); border-radius:5px;
+  padding:1px 5px; font-size:11.5px}
+.foot{text-align:center; color:#7E879E; font-size:11.5px; margin-top:20px; line-height:1.6}
+@media (max-width:420px){ .box{padding:24px} }
+@media (prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important} }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="mark">DM</div>
+    <div><div class="n">Digital Media Hawkers</div><div class="s">Campaign reporting</div></div>
+  </div>
+
+  <div class="box">
+    <h1>Sign in</h1>
+    <p class="sub">Your campaign performance, updated as it runs.</p>
+
+    <div class="err" id="err" hidden></div>
+    <div class="ok" id="ok" hidden></div>
+
+    <div class="f">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" autocapitalize="off"
+             spellcheck="false" placeholder="you@company.co.ke">
+    </div>
+    <div class="f">
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <button class="submit" id="btn">Sign in</button>
+
+    <div class="note" id="demoNote" hidden>
+      
+    </div>
+  </div>
+
+  <div class="foot">Access is logged. Contact your account manager if you need a reset.</div>
+</div>
+
+<script>
+/**
+ * One door for everyone.
+ *
+ * There is no "are you a client or an admin?" question, because asking it
+ * tells anyone with the link that an admin console exists. The credentials
+ * decide: the server returns a role, and this page forwards to the matching
+ * page with a one-time handoff so nobody has to type their password twice.
+ */
+const CONFIG = {
+  apiUrl: '',   // the server rewrites this to '/api' when it serves the page
+};
+
+const $ = id => document.getElementById(id);
+const showErr = m => { $('err').textContent = m; $('err').hidden = !m; $('ok').hidden = true; };
+
+/* ---------- demo backend, for opening these files directly ---------- */
+const DEMO_CLIENTS = {KCB: {id:'KCB', name:'KCB Group'}, SAF: {id:'SAF', name:'Safaricom PLC'}};
+const DEMO_USERS = {
+  'sarah@kcb.co.ke':               {pw:'demo1234', role:'client', name:'Sarah W.', clients:['KCB']},
+  'mike@safaricom.co.ke':          {pw:'demo1234', role:'client', name:'Mike O.',  clients:['SAF']},
+  'admin@digitalmediahawkers.com': {pw:'demo1234', role:'admin',  name:'DMH admin', clients:['KCB','SAF']},
+};
+function demoLogin(email, password){
+  return new Promise((resolve, reject) => setTimeout(() => {
+    const key = String(email || '').trim().toLowerCase();
+    const u = DEMO_USERS[key];
+    if (!u || u.pw !== password) return reject(new Error('Email or password is incorrect.'));
+    // Same shape the real API returns, so the handoff works either way.
+    resolve({ok:true, token:'demo', email:key, name:u.name, role:u.role,
+      clients:u.clients.map(c => DEMO_CLIENTS[c])});
+  }, 260));
+}
+
+async function login(email, password){
+  if (!CONFIG.apiUrl) return demoLogin(email, password);
+  const res = await fetch(CONFIG.apiUrl, {
+    method: 'POST',
+    redirect: 'follow',
+    body: JSON.stringify({action:'login', email, password}),
+  });
+  if (!res.ok && res.status !== 401 && res.status !== 400) {
+    throw new Error('Server returned ' + res.status);
+  }
+  const out = await res.json();
+  if (!out.ok) throw new Error(out.error || 'Sign in failed.');
+  return out;
+}
+
+$('demoNote').hidden = !!CONFIG.apiUrl;
+
+async function submit(){
+  const email = $('email').value.trim();
+  const password = $('pw').value;
+  if (!email || !password) return showErr('Enter your email and password.');
+
+  showErr('');
+  const btn = $('btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Signing in…';
+
+  try{
+    const r = await login(email, password);
+    const admin = String(r.role).toLowerCase() === 'admin';
+    const target = admin ? 'admin.html' : 'portal.html';
+
+    $('ok').innerHTML = admin
+      ? '<b>Welcome back.</b> Opening the admin console…'
+      : '<b>Signed in.</b> Opening your dashboard…';
+    $('ok').hidden = false;
+
+    // Hand the session over in sessionStorage rather than the URL, so the
+    // token never lands in browser history, bookmarks or a server log.
+    // The destination page consumes and clears it immediately.
+    try {
+      sessionStorage.setItem('dmh.handoff', JSON.stringify({
+        token: r.token, email: r.email, name: r.name, role: r.role,
+        clients: r.clients, at: Date.now(),
+      }));
+    } catch (err) {
+      // Private browsing can refuse storage; the destination just asks again.
+    }
+    $('pw').value = '';
+    setTimeout(() => { window.location.href = target; }, 420);
+  }catch(err){
+    showErr(err.message || 'Sign in failed.');
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+    $('pw').value = '';
+    $('pw').focus();
+  }
+}
+
+$('btn').addEventListener('click', submit);
+['email','pw'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') submit(); }));
+$('email').focus();
+</script>
+</body>
+</html>

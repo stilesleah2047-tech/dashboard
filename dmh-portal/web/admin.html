@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Digital Media Hawkers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0C1222; --ink-2:#17203A; --canvas:#F4F6FB; --surface:#fff;
+  --line:#E2E7F0; --line-soft:#EFF2F8; --muted:#69728A; --muted-2:#98A1B5;
+  --blue:#2C5CF6; --violet:#7A5AF8; --amber:#FF8A3D; --teal:#0E9F8E; --rose:#E2447B;
+  --radius:14px; --radius-sm:9px;
+  --shadow:0 1px 2px rgba(12,18,34,.04), 0 8px 24px -12px rgba(12,18,34,.14);
+  --display:'Space Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --body:'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--canvas); color:var(--ink); font-family:var(--body); font-size:14px;
+  line-height:1.5; -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums}
+button,input,select{font-family:inherit; font-size:inherit; color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue); outline-offset:2px; border-radius:4px}
+[hidden]{display:none !important}
+a{color:var(--blue)}
+
+/* shell */
+.topbar{background:var(--ink); color:#fff; padding:14px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:11px}
+.brand .mark{width:30px; height:30px; font-size:13px}
+.brand-name{font-family:var(--display); font-weight:600; font-size:15px}
+.brand-sub{font-size:11px; color:#8E97AE; letter-spacing:.06em; text-transform:uppercase}
+.chip-admin{padding:5px 11px; border-radius:99px; background:var(--amber); color:#0C1222;
+  font-family:var(--display); font-weight:700; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase}
+.topbar-right{margin-left:auto; display:flex; align-items:center; gap:10px}
+.who{font-size:12px; color:#8E97AE}
+.btn{background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.16); color:#fff;
+  padding:7px 14px; border-radius:8px; font-size:13px; font-weight:500}
+.btn:hover{background:rgba(255,255,255,.17)}
+.demo-strip{background:#FFF6E9; border-bottom:1px solid #F6E2C4; color:#8A5A16;
+  font-size:12.5px; padding:8px 24px; text-align:center}
+.demo-strip b{font-family:var(--display)}
+
+.wrap{max-width:1240px; margin:0 auto; padding:20px 24px 60px}
+.tabs{display:flex; gap:4px; margin-bottom:18px; border-bottom:1px solid var(--line)}
+.tab{background:none; border:none; padding:10px 16px; font-size:14px; font-weight:500; color:var(--muted);
+  border-bottom:2px solid transparent; margin-bottom:-1px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--ink); font-weight:600; border-bottom-color:var(--ink); font-family:var(--display)}
+.tab .count{color:var(--muted-2); font-size:12px; margin-left:6px}
+
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); margin-bottom:18px}
+.panel-head{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:16px 20px;
+  border-bottom:1px solid var(--line-soft)}
+.panel-title{font-family:var(--display); font-weight:600; font-size:15px; margin:0}
+.panel-note{font-size:12px; color:var(--muted)}
+.spacer{margin-left:auto}
+.btn-primary{background:var(--blue); color:#fff; border:1px solid var(--blue); padding:8px 16px;
+  border-radius:var(--radius-sm); font-weight:600; font-size:13.5px}
+.btn-primary:hover{background:#1F49D6}
+.btn-primary:disabled{opacity:.6; cursor:progress}
+.btn-ghost{background:#fff; border:1px solid var(--line); color:var(--ink); padding:8px 14px;
+  border-radius:var(--radius-sm); font-weight:500; font-size:13.5px}
+.btn-ghost:hover{border-color:#CBD3E2; background:var(--canvas)}
+.btn-sm{padding:5px 10px; font-size:12.5px; border-radius:7px}
+
+table{border-collapse:collapse; width:100%; font-size:13px}
+.table-scroll{overflow-x:auto}
+thead th{background:var(--ink-2); color:#fff; font-family:var(--display); font-weight:500; font-size:12px;
+  padding:11px 14px; text-align:left; white-space:nowrap}
+tbody td{padding:12px 14px; border-bottom:1px solid var(--line-soft); vertical-align:middle}
+tbody tr:hover{background:#F7F9FD}
+td.right, th.right{text-align:right}
+.code{font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:.04em;
+  background:var(--canvas); border:1px solid var(--line); border-radius:6px; padding:2px 8px; display:inline-block}
+.sub{color:var(--muted); font-size:12px}
+.pill{display:inline-block; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:600}
+.pill.on{background:#E4F8F1; color:#0B7A65; border:1px solid #BFEBDF}
+.pill.off{background:#F1F3F8; color:#69728A; border:1px solid #E2E7F0}
+.pill.warn{background:#FFF4E6; color:#9A5B12; border:1px solid #F7E0C0}
+.pill.admin{background:#EEF0FF; color:#3B3AA8; border:1px solid #D8DBFB}
+.rowacts{display:flex; gap:6px; justify-content:flex-end}
+.empty{padding:44px 20px; text-align:center; color:var(--muted)}
+.empty b{display:block; font-family:var(--display); color:var(--ink); margin-bottom:4px}
+
+/* reports */
+.report-controls{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; padding:16px 20px;
+  border-bottom:1px solid var(--line-soft)}
+.report-controls select{height:40px; padding:0 12px; border:1px solid var(--line);
+  border-radius:var(--radius-sm); background:#fff; width:100%}
+#report{padding:22px}
+.rp-head{display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; padding-bottom:18px;
+  border-bottom:2px solid var(--ink); margin-bottom:20px}
+.rp-brand{display:flex; align-items:center; gap:11px}
+.rp-title{font-family:var(--display); font-size:22px; font-weight:600; letter-spacing:-.025em; margin:0}
+.rp-sub{font-size:13px; color:var(--muted); margin-top:3px}
+.rp-meta{margin-left:auto; text-align:right; font-size:12px; color:var(--muted); line-height:1.6}
+.rp-meta b{font-family:var(--display); color:var(--ink)}
+.rp-disc{display:flex; gap:12px; align-items:flex-start; background:#FFF6E9; border:1px solid #F2DCBB;
+  color:#7A4E11; border-radius:var(--radius-sm); padding:12px 15px; margin-bottom:20px; font-size:12.5px; line-height:1.55}
+.rp-disc .m{font-family:var(--display); font-size:9.5px; font-weight:700; letter-spacing:.13em;
+  text-transform:uppercase; background:var(--amber); color:#0C1222; padding:4px 8px; border-radius:5px; flex:none}
+.rp-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px}
+.rp-stat{border:1px solid var(--line); border-radius:var(--radius-sm); padding:13px 14px}
+.rp-stat.proj{background:#FFFBF4; border-color:#F2DCBB}
+.rp-stat .k{font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted)}
+.rp-stat.proj .k{color:#9A5B12}
+.rp-stat .v{font-family:var(--display); font-weight:600; font-size:21px; letter-spacing:-.025em; margin-top:3px}
+.rp-stat .n{font-size:11.5px; color:var(--muted-2); margin-top:2px}
+.rp-h3{font-family:var(--display); font-size:13px; font-weight:600; margin:0 0 10px; letter-spacing:-.01em}
+#report table{margin-bottom:20px}
+#report thead th{font-size:11px}
+#report thead th.proj{background:#6B430D}
+#report td.proj{color:#9A5B12; background:#FFFBF4}
+.rp-pace{font-family:var(--display); font-weight:600}
+.rp-pace.under{color:#B4243F} .rp-pace.over{color:#0B7A65} .rp-pace.on{color:var(--ink)}
+.rp-foot{font-size:11.5px; color:var(--muted-2); border-top:1px solid var(--line-soft);
+  padding-top:14px; line-height:1.7}
+@media (max-width:900px){ .rp-grid{grid-template-columns:repeat(2,1fr)} }
+
+@media print{
+  body{background:#fff}
+  .topbar,.tabs,.report-controls,.demo-strip,.drawer,.scrim,.toast,
+  #viewClients,#viewCampaigns,#viewUsers,.panel-head{display:none !important}
+  .wrap{padding:0; max-width:none}
+  .panel{border:none; box-shadow:none; margin:0}
+  #report{padding:0}
+  .rp-disc, .rp-disc .m, #report thead th, #report thead th.proj, #report td.proj, .rp-stat.proj{
+    -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  #report table{break-inside:auto}
+  tr{break-inside:avoid}
+}
+
+/* live calculator */
+.calc{background:#F1F4FE; border:1px solid #D9E1FB; border-radius:var(--radius-sm);
+  padding:14px 15px; margin-bottom:16px}
+.calc-head{font-family:var(--display); font-size:10.5px; font-weight:700; letter-spacing:.11em;
+  text-transform:uppercase; color:#2B3E86; margin-bottom:11px}
+.calc-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px 10px}
+.calc-cell .k{font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.calc-cell .v{font-family:var(--display); font-weight:600; font-size:17px; letter-spacing:-.02em;
+  color:var(--ink); margin-top:2px}
+.calc-cell.wide{grid-column:span 3}
+.calc-note{font-size:12px; color:#3B4E96; margin-top:11px; line-height:1.5}
+.calc.bad{background:#FEF2F4; border-color:#F9D4DC}
+.calc.bad .calc-head, .calc.bad .calc-note{color:#B4243F}
+textarea{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius-sm);
+  font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; line-height:1.5; resize:vertical}
+textarea:hover{border-color:#CBD3E2}
+
+/* drawer form */
+.scrim{position:fixed; inset:0; background:rgba(12,18,34,.5); z-index:50; display:none}
+.scrim.open{display:block}
+.drawer{position:fixed; top:0; right:0; bottom:0; width:min(520px,100vw); background:#fff; z-index:60;
+  box-shadow:-24px 0 60px -30px rgba(12,18,34,.6); transform:translateX(100%); transition:transform .22s ease;
+  display:flex; flex-direction:column}
+.drawer.open{transform:none}
+.drawer-head{padding:20px 22px; border-bottom:1px solid var(--line-soft); display:flex; align-items:center; gap:12px}
+.drawer-head h2{font-family:var(--display); font-size:17px; font-weight:600; margin:0}
+.drawer-body{padding:20px 22px; overflow:auto; flex:1}
+.drawer-foot{padding:16px 22px; border-top:1px solid var(--line-soft); display:flex; gap:10px; align-items:center}
+.close{background:none; border:none; font-size:20px; color:var(--muted); margin-left:auto; line-height:1}
+.f{margin-bottom:16px}
+.f label{display:block; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted-2); margin-bottom:6px}
+.f input, .f select{width:100%; height:40px; padding:0 12px; border:1px solid var(--line);
+  border-radius:var(--radius-sm); background:#fff}
+.f input:hover, .f select:hover{border-color:#CBD3E2}
+.f .help{font-size:12px; color:var(--muted); margin-top:6px}
+.f-row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.inline{display:flex; gap:8px; align-items:center}
+.inline input{flex:1}
+.check{display:flex; align-items:center; gap:9px; font-size:13.5px}
+.check input{width:16px; height:16px; accent-color:var(--blue)}
+.note{border-radius:var(--radius-sm); padding:11px 13px; font-size:12.5px; margin-bottom:16px; line-height:1.5}
+.note.ok{background:#E9F8F3; border:1px solid #C4E9DD; color:#0B6B58}
+.note.bad{background:#FEF2F4; border:1px solid #F9D4DC; color:#B4243F}
+.note.info{background:#F1F4FE; border:1px solid #D9E1FB; color:#2B3E86}
+.note b{font-family:var(--display)}
+.toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); opacity:0;
+  background:var(--ink); color:#fff; padding:11px 18px; border-radius:10px; font-size:13px; z-index:80;
+  transition:opacity .2s, transform .2s; box-shadow:0 16px 40px -14px rgba(12,18,34,.6); pointer-events:none}
+.toast.show{opacity:1; transform:translateX(-50%)}
+@media (max-width:720px){ .f-row{grid-template-columns:1fr} .wrap{padding:14px 12px 40px} }
+@media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<!-- ============ APP ============ -->
+<div id="app">
+<div class="demo-strip" id="demoStrip" hidden>
+  <!--<b>Demo mode</b> — nothing is written to a real sheet. Add your Apps Script URL to <b>CONFIG.apiUrl</b> to go live.-->
+</div>
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">DM</div>
+    <div><div class="brand-name">Digital Media Hawkers</div><div class="brand-sub">Admin console</div></div>
+  </div>
+  <span class="chip-admin">Admin</span>
+  <div class="topbar-right">
+    <div class="who" id="whoAmI">—</div>
+    <button class="btn" id="btnOut">Sign out</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-t="clients">Clients <span class="count" id="cCount"></span></button>
+    <button class="tab" data-t="campaigns">Campaigns <span class="count" id="kCount"></span></button>
+    <button class="tab" data-t="users">Logins <span class="count" id="uCount"></span></button>
+    <button class="tab" data-t="reports">Reports</button>
+  </div>
+
+  <!-- CLIENTS -->
+  <section class="panel" id="viewClients">
+    <div class="panel-head">
+      <h2 class="panel-title">Client accounts</h2>
+      <span class="panel-note">Each client sees only its own campaigns</span>
+      <span class="spacer"></span>
+      <button class="btn-primary" id="btnNewClient">New client</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>Code</th><th>Client</th><th>Campaigns</th><th class="right">Budget</th>
+          <th>Status</th><th class="right">Actions</th>
+        </tr></thead>
+        <tbody id="clientRows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="clientEmpty" hidden>
+      <b>No clients yet</b>Create one, then add its campaigns.
+    </div>
+  </section>
+
+  <!-- CAMPAIGNS -->
+  <section class="panel" id="viewCampaigns" hidden>
+    <div class="panel-head">
+      <h2 class="panel-title">Campaigns</h2>
+      <span class="panel-note">Budget and rate produce the projection the client sees</span>
+      <span class="spacer"></span>
+      <button class="btn-ghost" id="btnImport">Import partner delivery</button>
+      <button class="btn-primary" id="btnNewCampaign">New campaign</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>Campaign</th><th>Client</th><th>Flight</th>
+          <th class="right">Budget</th><th class="right">Projected</th>
+          <th>Delivery</th><th class="right">Actions</th>
+        </tr></thead>
+        <tbody id="campaignRows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="campaignEmpty" hidden>
+      <b>No campaigns yet</b>Create one and the client's dashboard starts showing its projection.
+    </div>
+  </section>
+
+  <!-- USERS -->
+  <section class="panel" id="viewUsers" hidden>
+    <div class="panel-head">
+      <h2 class="panel-title">Portal logins</h2>
+      <span class="panel-note">A login sees one client — or all of them, for DMH staff</span>
+      <span class="spacer"></span>
+      <button class="btn-primary" id="btnNewUser">New login</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>Email</th><th>Name</th><th>Sees</th><th>Role</th><th>Last sign in</th>
+          <th>Status</th><th class="right">Actions</th>
+        </tr></thead>
+        <tbody id="userRows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="userEmpty" hidden>
+      <b>No logins yet</b>Create a client first, then add the people who should see it.
+    </div>
+  </section>
+
+  <!-- REPORTS -->
+  <section class="panel" id="viewReports" hidden>
+    <div class="panel-head">
+      <h2 class="panel-title">Campaign report</h2>
+      <span class="panel-note">Full-flight totals for one client, ready to send</span>
+    </div>
+    <div class="report-controls">
+      <div class="f" style="margin:0;min-width:220px">
+        <label for="rpClient">Client</label>
+        <select id="rpClient"></select>
+      </div>
+      <div class="f" style="margin:0;min-width:260px">
+        <label for="rpScope">Campaigns</label>
+        <select id="rpScope"></select>
+      </div>
+      <div class="f" style="margin:0">
+        <label for="rpPeriod">Period</label>
+        <select id="rpPeriod">
+          <option value="flight">Full flight</option>
+          <option value="todate">Start to today</option>
+        </select>
+      </div>
+      <button class="btn-primary" id="rpBuild">Build report</button>
+      <button class="btn-ghost" id="rpPrint" disabled>Print / PDF</button>
+      <button class="btn-ghost" id="rpCsv" disabled>CSV</button>
+    </div>
+    <div class="empty" id="rpEmpty">
+      <b>Pick a client and build their report</b>
+      Cumulative projected against whatever delivery has been imported.
+    </div>
+    <div id="report" hidden></div>
+  </section>
+</div>
+</div>
+
+<!-- ============ DRAWERS ============ -->
+<div class="scrim" id="scrim"></div>
+
+<div class="drawer" id="clientDrawer">
+  <div class="drawer-head"><h2 id="cdTitle">New client</h2><button class="close" data-close>×</button></div>
+  <div class="drawer-body">
+    <div class="note" id="cdNote" hidden></div>
+    <div class="f-row">
+      <div class="f"><label for="cdId">Client code</label>
+        <input id="cdId" placeholder="KCB" maxlength="16">
+        <div class="help">Short, permanent, used internally. Letters and numbers.</div></div>
+      <div class="f"><label for="cdName">Client name</label>
+        <input id="cdName" placeholder="KCB Group"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label for="cdPartner">Media partner</label><input id="cdPartner" value="Phoenix Ads"></div>
+      <div class="f"><label for="cdCurrency">Currency</label>
+        <select id="cdCurrency"><option>USD</option><option>KES</option><option>EUR</option><option>GBP</option></select></div>
+    </div>
+    <div class="f"><label for="cdBudget">Total budget</label>
+      <input id="cdBudget" type="number" min="0" step="100" placeholder="42000">
+      <div class="help">Drives the pacing bar on their dashboard.</div></div>
+    <div class="note info">
+      Campaigns are added on the Campaigns tab once this client exists. Each one carries its own
+      budget and rate; this figure is the account total used for the pacing bar.
+    </div>
+    <div class="f check">
+      <input type="checkbox" id="cdActive" checked><label for="cdActive" style="margin:0;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--ink)">Active — their logins work</label>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn-primary" id="cdSave">Save client</button>
+    <button class="btn-ghost" data-close>Cancel</button>
+  </div>
+</div>
+
+<div class="drawer" id="campaignDrawer">
+  <div class="drawer-head"><h2 id="kdTitle">New campaign</h2><button class="close" data-close>×</button></div>
+  <div class="drawer-body">
+    <div class="note info">
+      <b>This creates a projection, not delivery.</b> The figures below are what the buy is
+      expected to produce. The client's dashboard labels them as projected, and only shows
+      them as delivered once the partner's own numbers are imported.
+    </div>
+    <div class="note" id="kdNote" hidden></div>
+
+    <div class="f-row">
+      <div class="f"><label for="kdClient">Client</label><select id="kdClient"></select></div>
+      <div class="f"><label for="kdId">Campaign ID</label>
+        <input id="kdId" placeholder="41040">
+        <div class="help">The partner's own ID. Used to match imported delivery.</div></div>
+    </div>
+    <div class="f"><label for="kdName">Campaign name</label>
+      <input id="kdName" placeholder="KCB_MBP_Campaign_Common_Cents_2026">
+      <div class="help">Shown to the client exactly as typed.</div></div>
+
+    <div class="f-row">
+      <div class="f"><label for="kdBilling">Buying on</label>
+        <select id="kdBilling">
+          <option value="cpm">CPM — per thousand impressions</option>
+          <option value="cpc">CPC — per click</option>
+          <option value="cpi">CPI — per install</option>
+          <option value="cpd">CPD — per download</option>
+        </select></div>
+      <div class="f"><label for="kdRate" id="kdRateLabel">CPM rate</label>
+        <input id="kdRate" type="number" step="0.0001" min="0" placeholder="1.50">
+        <div class="help" id="kdRateHelp">Your contracted rate per thousand impressions.</div></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label for="kdBudget">Budget</label>
+        <input id="kdBudget" type="number" step="100" min="0" placeholder="42000"></div>
+      <div class="f"><label for="kdCtr">Expected CTR %</label>
+        <input id="kdCtr" type="number" step="0.01" min="0" max="100" placeholder="3.36">
+        <div class="help">Your estimate, from comparable campaigns.</div></div>
+    </div>
+    <div class="f" id="kdInstallWrap" hidden>
+      <label for="kdInstallRate" id="kdConvLabel">Expected install rate %</label>
+      <input id="kdInstallRate" type="number" step="0.1" min="0" max="100" placeholder="10">
+      <div class="help" id="kdConvHelp">Installs as a share of clicks.</div>
+    </div>
+
+    <div class="calc" id="kdCalc">
+      <div class="calc-head">Projected for this budget</div>
+      <div class="calc-grid" id="kdCalcGrid"></div>
+      <div class="calc-note" id="kdCalcNote"></div>
+    </div>
+
+    <div class="f-row">
+      <div class="f"><label for="kdStart">Flight starts</label><input id="kdStart" type="date"></div>
+      <div class="f"><label for="kdEnd">Flight ends</label><input id="kdEnd" type="date"></div>
+    </div>
+    <div class="f-row">
+      <div class="f"><label for="kdShape">Pacing shape</label>
+        <select id="kdShape">
+          <option value="even">Even — flat daily budget</option>
+          <option value="weekday">Weekday — weekends at 70%</option>
+          <option value="frontloaded">Front-loaded — heavy at launch</option>
+          <option value="backloaded">Back-loaded — builds to a deadline</option>
+        </select></div>
+      <div class="f"><label for="kdObjective">Objective</label><input id="kdObjective" placeholder="traffic"></div>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn-primary" id="kdSave">Save campaign</button>
+    <button class="btn-ghost" data-close>Cancel</button>
+  </div>
+</div>
+
+<div class="drawer" id="importDrawer">
+  <div class="drawer-head"><h2>Import partner delivery</h2><button class="close" data-close>×</button></div>
+  <div class="drawer-body">
+    <div class="note info">
+      <b>This is the only way delivery figures enter the system.</b> Paste the media partner's
+      export. Rows whose campaign ID is unknown are skipped, and re-importing a day corrects
+      it rather than duplicating it.
+    </div>
+    <div class="note" id="imNote" hidden></div>
+    <div class="f">
+      <label for="imCsv">Paste CSV</label>
+      <textarea id="imCsv" rows="11" placeholder="date,campaign_id,impressions,clicks,spend,downloads
+2026-08-04,41040,84210,2914,126.32,0"></textarea>
+      <div class="help">Header row optional. Order: date, campaign_id, impressions, clicks, spend, downloads.</div>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn-primary" id="imSave">Import</button>
+    <button class="btn-ghost" data-close>Cancel</button>
+  </div>
+</div>
+
+<div class="drawer" id="userDrawer">
+  <div class="drawer-head"><h2 id="udTitle">New login</h2><button class="close" data-close>×</button></div>
+  <div class="drawer-body">
+    <div class="note" id="udNote" hidden></div>
+    <div class="f"><label for="udEmail">Work email</label>
+      <input id="udEmail" type="email" placeholder="sarah@kcb.co.ke">
+      <div class="help">This is the username. It can't be changed later.</div></div>
+    <div class="f"><label for="udName">Display name</label><input id="udName" placeholder="Sarah W."></div>
+    <div class="f-row">
+      <div class="f"><label for="udClient">Sees which client</label><select id="udClient"></select></div>
+      <div class="f"><label for="udRole">Role</label>
+        <select id="udRole"><option value="client">Client</option><option value="admin">DMH admin</option></select></div>
+    </div>
+    <div class="f"><label for="udPw">Password</label>
+      <div class="inline"><input id="udPw" type="text" placeholder="At least 8 characters">
+        <button class="btn-ghost btn-sm" id="udGen">Generate</button></div>
+      <div class="help" id="udPwHelp">Send it over a different channel than the email they log in with.</div></div>
+    <div class="f check">
+      <input type="checkbox" id="udActive" checked><label for="udActive" style="margin:0;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--ink)">Active — this login works</label>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn-primary" id="udSave">Save login</button>
+    <button class="btn-ghost" data-close>Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   CONFIG — same Apps Script URL as the client portal.
+   Leave blank to run the console against an in-memory demo.
+   ================================================================= */
+const CONFIG = {
+  apiUrl: '',   // 'https://script.google.com/macros/s/AKfyc.../exec'
+};
+
+let SESSION = null;
+let CLIENTS = [], USERS = [], CAMPAIGNS = [];
+
+/* ---------------------------------------------------------------------
+   The plan calculator. Mirrors src/plan.js on the server exactly, so the
+   figures moving under the form are the ones that will be stored.
+
+   The three inputs are not independent:   CPM = CPC x CTR x 1000
+   Budget and the contracted rate are known, CTR is the estimate, so CPC
+   falls out rather than being entered.
+   --------------------------------------------------------------------- */
+const BILLING = {
+  cpm: {buys:'impressions', outcome:'clicks',      label:'Clicks',    one:'click',
+        rateLabel:'CPM rate', rateHelp:'Your contracted rate per thousand impressions.'},
+  cpc: {buys:'clicks',      outcome:'clicks',      label:'Clicks',    one:'click',
+        rateLabel:'CPC rate', rateHelp:'Your contracted rate per click.'},
+  cpi: {buys:'conversions', outcome:'conversions', label:'Installs',  one:'install',
+        rateLabel:'CPI rate', rateHelp:'Your contracted rate per install.'},
+  cpd: {buys:'conversions', outcome:'conversions', label:'Downloads', one:'download',
+        rateLabel:'CPD rate', rateHelp:'Your contracted rate per download.'},
+};
+const billingOf = b => BILLING[String(b || 'cpm').toLowerCase()] ? String(b).toLowerCase() : 'cpm';
+
+function deriveTargets({budget, billing, rate, ctr, convRate, installRate}){
+  budget = +budget; rate = +rate; ctr = +ctr;
+  const model = billingOf(billing);
+  const conv = +(convRate != null && convRate !== '' ? convRate : (installRate || 0)) || 0;
+  if (!(budget > 0)) throw new Error('Enter a budget above zero.');
+  if (!(rate > 0)) throw new Error('Enter a rate above zero.');
+  if (!(ctr > 0 && ctr < 1)) throw new Error('Expected CTR must be between 0 and 100%.');
+
+  const needsConv = BILLING[model].buys === 'conversions';
+  if (needsConv && !(conv > 0 && conv <= 1)){
+    throw new Error('Expected ' + BILLING[model].one + ' rate must be between 0 and 100% of clicks.');
+  }
+  let impressions, clicks, conversions;
+  if (model === 'cpm'){
+    impressions = budget / rate * 1000; clicks = impressions * ctr;
+    conversions = conv > 0 ? clicks * conv : 0;
+  } else if (model === 'cpc'){
+    clicks = budget / rate; impressions = clicks / ctr;
+    conversions = conv > 0 ? clicks * conv : 0;
+  } else {
+    conversions = budget / rate; clicks = conversions / conv; impressions = clicks / ctr;
+  }
+  const out = {impressions:Math.round(impressions), clicks:Math.round(clicks),
+    conversions:Math.round(conversions),
+    cpm: impressions ? budget/impressions*1000 : 0,
+    cpc: clicks ? budget/clicks : 0,
+    cpa: conversions ? budget/conversions : 0,
+    results: Math.round(BILLING[model].outcome === 'conversions' ? conversions : clicks),
+    outcomeLabel: BILLING[model].label};
+  out.downloads = out.conversions;
+  out.cpd = model === 'cpd' ? out.cpa : 0;
+  return out;
+}
+const dayCount = (a, b) => Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000) + 1;
+
+/* ---------- api ---------- */
+async function api(action, body){
+  if (!CONFIG.apiUrl) return demoApi(action, body);
+  const res = await fetch(CONFIG.apiUrl, {
+    method: 'POST',
+    redirect: 'follow',
+    // plain-text body keeps this a "simple" request, so the browser skips
+    // the CORS preflight that Apps Script cannot answer
+    body: JSON.stringify(Object.assign({action}, body || {}, SESSION ? {token: SESSION.token} : {})),
+  });
+  if (!res.ok) throw new Error('Server returned ' + res.status);
+  const out = await res.json();
+  if (!out.ok) throw new Error(out.error || 'Request failed');
+  return out;
+}
+
+/* ---------- demo backend ---------- */
+const DEMO = {
+  users: [
+    {email:'admin@digitalmediahawkers.com', pw:'demo1234', clientId:'ALL', name:'DMH admin', role:'admin', active:true, lastLogin:''},
+    {email:'sarah@kcb.co.ke',      pw:'demo1234', clientId:'KCB', name:'Sarah W.', role:'client', active:true, lastLogin:'2026-08-04 08:12'},
+    {email:'mike@safaricom.co.ke', pw:'demo1234', clientId:'SAF', name:'Mike O.',  role:'client', active:true, lastLogin:'2026-08-03 17:40'},
+  ],
+  clients: [
+    {id:'KCB', name:'KCB Group', partner:'Phoenix Ads', currency:'USD', budget:42000, active:true, created:'2026-05-02'},
+    {id:'SAF', name:'Safaricom PLC', partner:'Phoenix Ads', currency:'USD', budget:68000, active:true, created:'2026-02-11'},
+  ],
+  campaigns: [
+    {campaignId:'41040', clientId:'KCB', name:'KCB_MBP_Campaign_Common_Cents_2026', billing:'cpm',
+     rate:1.5, ctr:0.0336, budget:42000, startDate:'2026-07-15', endDate:'2026-08-31',
+     objective:'traffic', shape:'weekday', planDays:48, actualDays:21,
+     targets:{impressions:28000000, clicks:940800, downloads:0, cpc:0.0446, cpm:1.5, cpd:0, results:940800},
+     delivered:{impressions:11240500, clicks:389420, spend:16860.75, downloads:0, days:21}},
+    {campaignId:'39210', clientId:'SAF', name:'PHX_SAF_Business_Positioning_2026', billing:'cpd',
+     rate:0.42, ctr:0.041, convRate:0.1, budget:10000, startDate:'2026-06-15', endDate:'2026-08-20',
+     objective:'installs', shape:'even', planDays:67, actualDays:51,
+     targets:{impressions:5807201, clicks:238095, downloads:23810, cpc:0.042, cpm:1.722, cpd:0.42, results:23810},
+     delivered:{impressions:4310880, clicks:181057, spend:7383.60, downloads:17580, days:51}},
+    {campaignId:'41055', clientId:'KCB', name:'KCB_MBP_Campaign_Traffic_Clicks_2026', billing:'cpc',
+     rate:0.05, ctr:0.03, budget:5000, startDate:'2026-07-20', endDate:'2026-08-15',
+     objective:'traffic', shape:'even', planDays:27, actualDays:14,
+     targets:{impressions:3333333, clicks:100000, conversions:0, cpm:1.5, cpc:0.05, cpa:0,
+              results:100000, outcomeLabel:'Clicks', downloads:0, cpd:0},
+     delivered:{impressions:1704200, clicks:52480, spend:2624.00, downloads:0, days:14}},
+    {campaignId:'40990', clientId:'SAF', name:'PHX_SAF_Fuliza_Launch_Sep2026', billing:'cpm',
+     rate:1.8, ctr:0.028, budget:24000, startDate:'2026-08-05', endDate:'2026-09-15',
+     objective:'traffic', shape:'weekday', planDays:42, actualDays:0,
+     targets:{impressions:13333333, clicks:373333, downloads:0, cpc:0.0643, cpm:1.8, cpd:0, results:373333}},
+  ],
+};
+function demoApi(action, body){
+  body = body || {};
+  return new Promise((resolve, reject) => setTimeout(() => {
+    const fail = m => reject(new Error(m));
+    if (action === 'admin.clients') return resolve({ok:true, clients: DEMO.clients.map(c =>
+      Object.assign({}, c, {campaigns: DEMO.campaigns.filter(k => k.clientId === c.id).length}))});
+    if (action === 'admin.campaigns') return resolve({ok:true, campaigns: DEMO.campaigns.map(c => Object.assign({}, c))});
+    if (action === 'admin.previewPlan'){
+      try { return resolve({ok:true, targets: deriveTargets(body)}); }
+      catch (e){ return fail(e.message); }
+    }
+    if (action === 'admin.saveCampaign'){
+      if (!body.clientId) return fail('Pick a client for this campaign.');
+      if (!String(body.campaignId || '').trim()) return fail('Enter the campaign ID from the media partner.');
+      if (!String(body.name || '').trim()) return fail('Campaign name is required.');
+      if (!body.startDate || !body.endDate) return fail('Set the flight dates.');
+      if (new Date(body.endDate) < new Date(body.startDate)) return fail('End date falls before the start date.');
+      let targets;
+      try { targets = deriveTargets(body); } catch (e){ return fail(e.message); }
+      const id = String(body.campaignId).trim();
+      const prior = DEMO.campaigns.find(c => c.campaignId === id);
+      if (prior && prior.clientId !== body.clientId) return fail('Campaign ID ' + id + ' already belongs to ' + prior.clientId + '.');
+      const row = {campaignId:id, clientId:body.clientId, name:body.name.trim(), billing:billingOf(body.billing),
+        rate:+body.rate, ctr:+body.ctr, convRate:+body.convRate || +body.installRate || 0, budget:+body.budget,
+        startDate:body.startDate, endDate:body.endDate, objective:body.objective || '',
+        shape:body.shape || 'even', targets, planDays: dayCount(body.startDate, body.endDate),
+        actualDays: prior ? prior.actualDays : 0};
+      if (prior) Object.assign(prior, row); else DEMO.campaigns.push(row);
+      return resolve({ok:true, campaignId:id, created:!prior, updated:!!prior, targets, days:row.planDays});
+    }
+    if (action === 'admin.deleteCampaign'){
+      DEMO.campaigns = DEMO.campaigns.filter(c => c.campaignId !== String(body.campaignId));
+      return resolve({ok:true});
+    }
+    if (action === 'admin.importActuals'){
+      const rows = body.rows || [];
+      const known = new Set(DEMO.campaigns.map(c => c.campaignId));
+      let written = 0, skipped = 0;
+      const touched = new Set();
+      for (const r of rows){
+        if (!known.has(String(r.campaignId).trim())){ skipped++; continue; }
+        written++; touched.add(String(r.campaignId).trim());
+      }
+      for (const id of touched){
+        const c = DEMO.campaigns.find(c => c.campaignId === id);
+        if (c) c.actualDays = (c.actualDays || 0) + 1;
+      }
+      return resolve({ok:true, written, skipped, skippedIds:[]});
+    }
+    if (action === 'admin.users')   return resolve({ok:true, users: DEMO.users.map(u => ({
+      email:u.email, clientId:u.clientId, name:u.name, role:u.role, active:u.active, lastLogin:u.lastLogin}))});
+    if (action === 'admin.saveClient'){
+      const id = String(body.id || '').trim().toUpperCase();
+      if (!/^[A-Z0-9_-]{2,16}$/.test(id)) return fail('Client code must be 2-16 characters: letters, numbers, dash or underscore.');
+      if (!String(body.name || '').trim()) return fail('Client name is required.');
+      const row = {id, name:body.name.trim(), partner:body.partner || 'Phoenix Ads',
+        currency:body.currency || 'USD', budget:+body.budget || 0,
+        active: body.active !== false, created: new Date().toISOString().slice(0,10)};
+      const i = DEMO.clients.findIndex(c => c.id === id);
+      if (i > -1){ row.created = DEMO.clients[i].created; DEMO.clients[i] = row; return resolve({ok:true, id, updated:true}); }
+      DEMO.clients.push(row); return resolve({ok:true, id, created:true});
+    }
+    if (action === 'admin.clientActive'){
+      const c = DEMO.clients.find(c => c.id === body.id); if (!c) return fail('No such client.');
+      c.active = body.active !== false; return resolve({ok:true});
+    }
+    if (action === 'admin.saveUser'){
+      const email = String(body.email || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('Enter a valid email address.');
+      if (!body.clientId) return fail('Assign the login to a client.');
+      const i = DEMO.users.findIndex(u => u.email === email);
+      if (i < 0 && String(body.password || '').length < 8) return fail('Set a password of at least 8 characters for a new login.');
+      if (body.password && String(body.password).length < 8) return fail('Passwords must be at least 8 characters.');
+      const row = {email, pw: body.password || (i > -1 ? DEMO.users[i].pw : ''), clientId:String(body.clientId).toUpperCase(),
+        name:body.name || '', role: body.role === 'admin' ? 'admin' : 'client', active: body.active !== false,
+        lastLogin: i > -1 ? DEMO.users[i].lastLogin : ''};
+      if (i > -1){ DEMO.users[i] = row; return resolve({ok:true, email, updated:true, passwordChanged: !!body.password}); }
+      DEMO.users.push(row); return resolve({ok:true, email, created:true});
+    }
+    if (action === 'admin.userActive'){
+      const u = DEMO.users.find(u => u.email === body.email); if (!u) return fail('No such login.');
+      if (SESSION && u.email === SESSION.email && body.active === false) return fail('You cannot disable your own login.');
+      u.active = body.active !== false; return resolve({ok:true});
+    }
+    fail('Unknown action');
+  }, 240));
+}
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nfMoney = new Intl.NumberFormat('en-US');
+let toastTimer;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+function note(el, kind, html){
+  el.className = 'note ' + kind; el.innerHTML = html; el.hidden = false;
+}
+
+/* ---------- session ---------- */
+/* ---------------------------------------------------------------------
+   Session handoff.
+
+   Sign-in happens once, on index.html, which routes by role. This page
+   picks up that session, clears it from storage immediately so it cannot
+   be replayed, and sends anyone without one — or anyone who is not an
+   administrator — back to the front door.
+   --------------------------------------------------------------------- */
+function takeHandoff(){
+  let raw = null;
+  try { raw = sessionStorage.getItem('dmh.handoff'); sessionStorage.removeItem('dmh.handoff'); }
+  catch (err) { return null; }
+  if (!raw) return null;
+  try {
+    const h = JSON.parse(raw);
+    // A handoff is for the next page load, not for later.
+    if (!h.token || Date.now() - h.at > 30000) return null;
+    return h;
+  } catch (err) { return null; }
+}
+function goSignIn(){ window.location.replace('index.html'); }
+
+async function boot(){
+  const h = takeHandoff();
+  if (!h) return goSignIn();
+  // The server refuses admin calls from a client token anyway; this just
+  // avoids showing an admin shell that would fail on every request.
+  if (String(h.role).toLowerCase() !== 'admin') return window.location.replace('portal.html');
+
+  SESSION = {token:h.token, email:h.email, name:h.name};
+  $('demoStrip').hidden = !!CONFIG.apiUrl;
+  $('whoAmI').textContent = h.name + ' · ' + h.email;
+  try { await refreshAll(); }
+  catch (err){
+    if (/sign in again|session expired|disabled|Administrator/i.test(err.message || '')) return goSignIn();
+    toast(err.message);
+  }
+}
+$('btnOut').addEventListener('click', () => {
+  SESSION = null; CLIENTS = []; USERS = []; CAMPAIGNS = [];
+  goSignIn();
+});
+
+boot();
+
+/* ---------- tabs ---------- */
+document.querySelector('.tabs').addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === b));
+  $('viewClients').hidden = b.dataset.t !== 'clients';
+  $('viewCampaigns').hidden = b.dataset.t !== 'campaigns';
+  $('viewUsers').hidden = b.dataset.t !== 'users';
+  $('viewReports').hidden = b.dataset.t !== 'reports';
+  if (b.dataset.t === 'reports') fillReportPickers();
+});
+
+/* ---------- load + paint ---------- */
+async function refreshAll(){
+  const [c, u, k] = await Promise.all([api('admin.clients'), api('admin.users'), api('admin.campaigns')]);
+  CLIENTS = c.clients; USERS = u.users; CAMPAIGNS = k.campaigns;
+  paintClients(); paintUsers(); paintCampaigns();
+}
+
+function campaignCell(c){
+  const n = c.campaigns || 0;
+  if (!n) return '<span class="pill warn">No campaigns</span>';
+  return `<b>${n}</b> campaign${n === 1 ? '' : 's'}<div class="sub">Projections are live for this client</div>`;
+}
+function paintClients(){
+  $('cCount').textContent = CLIENTS.length || '';
+  $('clientEmpty').hidden = !!CLIENTS.length;
+  $('clientRows').innerHTML = CLIENTS.map(c => `
+    <tr>
+      <td><span class="code">${esc(c.id)}</span></td>
+      <td><b>${esc(c.name)}</b><div class="sub">${esc(c.partner || '')}</div></td>
+      <td>${campaignCell(c)}</td>
+      <td class="right">${c.budget ? esc(c.currency) + ' ' + nfMoney.format(c.budget) : '<span class="sub">—</span>'}</td>
+      <td><span class="pill ${c.active ? 'on' : 'off'}">${c.active ? 'Active' : 'Paused'}</span></td>
+      <td><div class="rowacts">
+        <button class="btn-ghost btn-sm" data-edit-client="${esc(c.id)}">Edit</button>
+        <button class="btn-ghost btn-sm" data-toggle-client="${esc(c.id)}">${c.active ? 'Pause' : 'Activate'}</button>
+      </div></td>
+    </tr>`).join('');
+}
+function paintUsers(){
+  $('uCount').textContent = USERS.length || '';
+  $('userEmpty').hidden = !!USERS.length;
+  const nameOf = id => id === 'ALL' ? 'Every client' :
+    (CLIENTS.find(c => c.id === id) || {}).name || id;
+  $('userRows').innerHTML = USERS.map(u => `
+    <tr>
+      <td><b>${esc(u.email)}</b></td>
+      <td>${esc(u.name) || '<span class="sub">—</span>'}</td>
+      <td>${esc(nameOf(u.clientId))}<div class="sub">${esc(u.clientId)}</div></td>
+      <td><span class="pill ${u.role === 'admin' ? 'admin' : 'off'}">${u.role === 'admin' ? 'DMH admin' : 'Client'}</span></td>
+      <td class="sub">${esc(u.lastLogin ? String(u.lastLogin).slice(0,16).replace('T',' ') : 'Never')}</td>
+      <td><span class="pill ${u.active ? 'on' : 'off'}">${u.active ? 'Active' : 'Disabled'}</span></td>
+      <td><div class="rowacts">
+        <button class="btn-ghost btn-sm" data-edit-user="${esc(u.email)}">Edit</button>
+        <button class="btn-ghost btn-sm" data-toggle-user="${esc(u.email)}">${u.active ? 'Disable' : 'Enable'}</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function fmtDate(d){
+  if (!d) return '—';
+  const x = new Date(d + 'T00:00:00');
+  return x.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+}
+function paintCampaigns(){
+  $('kCount').textContent = CAMPAIGNS.length || '';
+  $('campaignEmpty').hidden = !!CAMPAIGNS.length;
+  const today = new Date().toISOString().slice(0,10);
+  $('campaignRows').innerHTML = CAMPAIGNS.map(c => {
+    const client = CLIENTS.find(x => x.id === c.clientId);
+    const t = c.targets || {};
+    const status = c.endDate < today ? ['off','Ended'] : c.startDate > today ? ['warn','Scheduled'] : ['on','Live'];
+    const delivery = c.actualDays
+      ? `<b>${c.actualDays}</b> day${c.actualDays === 1 ? '' : 's'}<div class="sub">imported from partner</div>`
+      : '<span class="pill warn">None yet</span><div class="sub">projection only</div>';
+    return `<tr>
+      <td><b>${esc(c.name)}</b>
+        <div class="sub">${esc(c.campaignId)} · ${esc(String(c.billing).toUpperCase())} at ${esc(c.rate)}
+        · <span class="pill ${status[0]}">${status[1]}</span></div></td>
+      <td>${esc(client ? client.name : c.clientId)}<div class="sub">${esc(c.clientId)}</div></td>
+      <td>${fmtDate(c.startDate)} – ${fmtDate(c.endDate)}<div class="sub">${c.planDays || 0} days</div></td>
+      <td class="right">${nfMoney.format(c.budget || 0)}</td>
+      <td class="right">${nfMoney.format(t.impressions || 0)}<div class="sub">impressions</div></td>
+      <td>${delivery}</td>
+      <td><div class="rowacts">
+        <button class="btn-ghost btn-sm" data-edit-campaign="${esc(c.campaignId)}">Edit</button>
+        <button class="btn-ghost btn-sm" data-del-campaign="${esc(c.campaignId)}">Delete</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ---------- drawers ---------- */
+function openDrawer(id){ $('scrim').classList.add('open'); $(id).classList.add('open'); }
+function closeDrawers(){
+  $('scrim').classList.remove('open');
+  document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open'));
+}
+$('scrim').addEventListener('click', closeDrawers);
+document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeDrawers(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawers(); });
+
+/* ---------- client drawer ---------- */
+let editingClient = null;
+function openClient(id){
+  editingClient = id ? CLIENTS.find(c => c.id === id) : null;
+  const c = editingClient;
+  $('cdTitle').textContent = c ? 'Edit ' + c.name : 'New client';
+  $('cdId').value = c ? c.id : '';
+  $('cdId').disabled = !!c;               // the code is the join key; never let it drift
+  $('cdName').value = c ? c.name : '';
+  $('cdPartner').value = c ? (c.partner || 'Phoenix Ads') : 'Phoenix Ads';
+  $('cdCurrency').value = c ? (c.currency || 'USD') : 'USD';
+  $('cdBudget').value = c && c.budget ? c.budget : '';
+  $('cdActive').checked = c ? !!c.active : true;
+  $('cdNote').hidden = true;
+  openDrawer('clientDrawer');
+  setTimeout(() => (c ? $('cdName') : $('cdId')).focus(), 220);
+}
+$('btnNewClient').addEventListener('click', () => openClient(null));
+document.addEventListener('click', e => {
+  const ed = e.target.closest('[data-edit-client]');
+  if (ed) openClient(ed.dataset.editClient);
+});
+
+$('cdSave').addEventListener('click', async () => {
+  const btn = $('cdSave'); btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const r = await api('admin.saveClient', {
+      id: $('cdId').value.trim().toUpperCase(),
+      name: $('cdName').value.trim(),
+      partner: $('cdPartner').value.trim(),
+      currency: $('cdCurrency').value,
+      budget: $('cdBudget').value,
+      active: $('cdActive').checked,
+    });
+    await refreshAll(); closeDrawers();
+    toast(r.created ? `${r.id} created. Add its campaigns next.` : `${r.id} updated.`);
+  }catch(err){ note($('cdNote'), 'bad', esc(err.message)); }
+  finally{ btn.disabled = false; btn.textContent = 'Save client'; }
+});
+
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-toggle-client]'); if (!t) return;
+  const c = CLIENTS.find(c => c.id === t.dataset.toggleClient);
+  try{
+    await api('admin.clientActive', {id:c.id, active: !c.active});
+    await refreshAll();
+    toast(c.active ? `${c.id} paused — their logins are blocked.` : `${c.id} active again.`);
+  }catch(err){ toast(err.message); }
+});
+
+/* =====================================================================
+   REPORTS
+
+   One report per client. Cumulative projected figures for the flight,
+   against whatever delivery has actually been imported, with the two kept
+   visibly apart — same rule as the client dashboard.
+   ===================================================================== */
+const SHAPES = {
+  even: () => 1,
+  weekday: (i, n, d) => ([0,6].includes(d.getUTCDay()) ? 0.7 : 1),
+  frontloaded: (i, n) => (n < 2 ? 1 : 1.4 - 0.8 * (i / (n - 1))),
+  backloaded: (i, n) => (n < 2 ? 1 : 0.6 + 0.8 * (i / (n - 1))),
+};
+function splitExact(total, weights){
+  const n = weights.length; if (!n) return [];
+  total = Math.round(total);
+  const sum = weights.reduce((a,b) => a+b, 0) || n;
+  const raw = weights.map(w => total * w / sum);
+  const out = raw.map(Math.floor);
+  const rem = Math.round(total - out.reduce((a,b) => a+b, 0));
+  const order = raw.map((v,i) => [v - out[i], i]).sort((a,b) => b[0] - a[0]);
+  for (let k = 0; k < rem; k++) out[order[k % n][1]] += 1;
+  return out;
+}
+/** Same curve the server generates, so projected-to-date matches exactly. */
+function planRows(c){
+  const start = new Date(c.startDate + 'T00:00:00Z'), end = new Date(c.endDate + 'T00:00:00Z');
+  const n = Math.round((end - start) / 86400000) + 1;
+  if (!(n > 0)) return [];
+  const dates = []; for (let i = 0; i < n; i++) dates.push(new Date(start.getTime() + i*86400000));
+  const wf = SHAPES[c.shape] || SHAPES.even;
+  const w = dates.map((d,i) => wf(i, n, d));
+  const t = c.targets || {};
+  const sp = splitExact((c.budget || 0) * 100, w).map(x => x/100);
+  const im = splitExact(t.impressions || 0, w);
+  const cl = splitExact(t.clicks || 0, w);
+  const dl = splitExact(t.downloads || 0, w);
+  return dates.map((d,i) => ({date: d.toISOString().slice(0,10),
+    spend: sp[i], impressions: im[i], clicks: cl[i], downloads: dl[i]}));
+}
+const zero = () => ({impressions:0, clicks:0, spend:0, downloads:0, days:0});
+function addTo(a, r){ a.impressions += r.impressions; a.clicks += r.clicks;
+  a.spend += r.spend; a.downloads += r.downloads; a.days += 1; return a; }
+function ratios(a, billing){
+  return Object.assign({}, a, {
+    ctr: a.impressions ? a.clicks / a.impressions * 100 : null,
+    cpm: a.impressions ? a.spend / a.impressions * 1000 : 0,
+    cpc: a.clicks ? a.spend / a.clicks : 0,
+    cpd: a.downloads ? a.spend / a.downloads : 0,
+    results: billing === 'cpd' ? a.downloads : a.clicks,
+  });
+}
+
+let REPORT = null;
+
+function fillReportPickers(){
+  const sel = $('rpClient');
+  const keep = sel.value;
+  sel.innerHTML = CLIENTS.map(c => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.id)})</option>`).join('');
+  if (keep && CLIENTS.some(c => c.id === keep)) sel.value = keep;
+  fillScope();
+}
+function fillScope(){
+  const clientId = $('rpClient').value;
+  const mine = CAMPAIGNS.filter(c => c.clientId === clientId);
+  $('rpScope').innerHTML =
+    `<option value="">All campaigns (${mine.length})</option>` +
+    mine.map(c => `<option value="${esc(c.campaignId)}">${esc(c.name)}</option>`).join('');
+}
+$('rpClient').addEventListener('change', fillScope);
+
+async function buildReport(){
+  const clientId = $('rpClient').value;
+  const client = CLIENTS.find(c => c.id === clientId);
+  if (!client){ toast('Create a client first.'); return; }
+  const scope = $('rpScope').value;
+  const toDateOnly = $('rpPeriod').value === 'todate';
+  const today = new Date().toISOString().slice(0,10);
+
+  let campaigns = CAMPAIGNS.filter(c => c.clientId === clientId);
+  if (scope) campaigns = campaigns.filter(c => c.campaignId === scope);
+  if (!campaigns.length){ toast('That client has no campaigns yet.'); return; }
+
+  // Live: pull the real daily series. Demo: derive the plan curve and use the
+  // stored delivered totals.
+  let live = null;
+  if (CONFIG.apiUrl){
+    try { live = await api('data', {clientId}); }
+    catch (err){ toast(err.message); return; }
+  }
+
+  const rows = campaigns.map(c => {
+    const plan = zero(), planToDate = zero(), del = zero();
+    if (live){
+      const lc = (live.campaigns || []).find(x => String(x.id) === String(c.campaignId));
+      const d0 = new Date(live.startDate + 'T00:00:00Z');
+      const dateAt = i => new Date(d0.getTime() + i*86400000).toISOString().slice(0,10);
+      for (const p of (lc ? lc.plan : [])){
+        const date = dateAt(p[0]);
+        const row = {impressions:p[1], clicks:p[2], spend:p[3], downloads:p[4]};
+        if (!toDateOnly || date <= today) addTo(plan, row);
+        if (date <= today) addTo(planToDate, row);
+      }
+      for (const r of (lc ? lc.rows : [])){
+        const date = dateAt(r[0]);
+        if (toDateOnly && date > today) continue;
+        addTo(del, {impressions:r[1], clicks:r[2], spend:r[3], downloads:r[4]});
+      }
+    } else {
+      for (const p of planRows(c)){
+        if (!toDateOnly || p.date <= today) addTo(plan, p);
+        if (p.date <= today) addTo(planToDate, p);
+      }
+      if (c.delivered) Object.assign(del, c.delivered);
+    }
+    return {c, plan: ratios(plan, c.billing), planToDate: ratios(planToDate, c.billing),
+      delivered: ratios(del, c.billing),
+      pacing: planToDate.impressions ? del.impressions / planToDate.impressions * 100 : null};
+  });
+
+  const sum = key => {
+    const a = zero();
+    for (const r of rows){ a.impressions += r[key].impressions; a.clicks += r[key].clicks;
+      a.spend += r[key].spend; a.downloads += r[key].downloads; }
+    a.days = Math.max(...rows.map(r => r[key].days), 0);
+    return ratios(a, rows[0].c.billing);
+  };
+  const totals = {plan: sum('plan'), planToDate: sum('planToDate'), delivered: sum('delivered')};
+  totals.pacing = totals.planToDate.impressions
+    ? totals.delivered.impressions / totals.planToDate.impressions * 100 : null;
+
+  REPORT = {client, rows, totals, scope, toDateOnly,
+    from: rows.map(r => r.c.startDate).sort()[0],
+    to: rows.map(r => r.c.endDate).sort().slice(-1)[0],
+    generated: new Date()};
+  paintReport();
+  $('rpPrint').disabled = false; $('rpCsv').disabled = false;
+}
+$('rpBuild').addEventListener('click', buildReport);
+
+function paceClass(v){ return v == null ? '' : v < 90 ? ' under' : v > 110 ? ' over' : ' on'; }
+const money2 = v => v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+function paintReport(){
+  const R = REPORT, box = $('report');
+  $('rpEmpty').hidden = true; box.hidden = false;
+  const anyDelivery = R.rows.some(r => r.delivered.days > 0);
+  const period = R.toDateOnly ? 'Start of flight to ' + R.generated.toISOString().slice(0,10)
+                              : R.from + ' to ' + R.to;
+
+  const stat = (k, v, n, proj) =>
+    `<div class="rp-stat${proj ? ' proj' : ''}"><div class="k">${k}</div><div class="v">${v}</div>` +
+    (n ? `<div class="n">${n}</div>` : '') + '</div>';
+
+  const T = R.totals;
+  const stats = [
+    stat('Projected impressions', nfMoney.format(T.plan.impressions), 'whole flight', true),
+    stat('Projected clicks', nfMoney.format(T.plan.clicks), 'at ' + (T.plan.ctr || 0).toFixed(2) + '% CTR', true),
+    stat('Projected spend', '$' + money2(T.plan.spend), 'budget committed', true),
+    stat('Projected CPC', '$' + (T.plan.cpc || 0).toFixed(4), 'implied', true),
+  ];
+  if (anyDelivery){
+    stats.push(
+      stat('Delivered impressions', nfMoney.format(T.delivered.impressions), 'reported by partner'),
+      stat('Delivered clicks', nfMoney.format(T.delivered.clicks),
+           T.delivered.ctr == null ? '' : T.delivered.ctr.toFixed(2) + '% CTR'),
+      stat('Delivered spend', '$' + money2(T.delivered.spend), ''),
+      stat('Pacing', T.pacing == null ? '—' : T.pacing.toFixed(1) + '%', 'of projection to date'));
+  }
+
+  const outcomes = [...new Set(R.rows.map(r => (BILLING[billingOf(r.c.billing)] || BILLING.cpm).label))];
+  const outcomeWord = outcomes.length === 1 ? outcomes[0] : 'Results';
+  const head = ['Campaign', 'Flight', 'Impressions PROJECTED', 'Clicks PROJECTED', 'Spend PROJECTED'];
+  if (anyDelivery) head.push('Impressions delivered', 'Clicks delivered', 'Spend delivered', 'Pacing');
+
+  const body = R.rows.map(r => {
+    const cells = [
+      `<td><b>${esc(r.c.name)}</b><div class="sub">${esc(r.c.campaignId)} · ${esc(String(r.c.billing).toUpperCase())} at ${esc(r.c.rate)}</div></td>`,
+      `<td>${esc(r.c.startDate)}<div class="sub">to ${esc(r.c.endDate)}</div></td>`,
+      `<td class="right proj">${nfMoney.format(r.plan.impressions)}</td>`,
+      `<td class="right proj">${nfMoney.format(r.plan.clicks)}</td>`,
+      `<td class="right proj">${money2(r.plan.spend)}</td>`,
+    ];
+    if (anyDelivery) cells.push(
+      `<td class="right">${nfMoney.format(r.delivered.impressions)}</td>`,
+      `<td class="right">${nfMoney.format(r.delivered.clicks)}</td>`,
+      `<td class="right">${money2(r.delivered.spend)}</td>`,
+      `<td class="right"><span class="rp-pace${paceClass(r.pacing)}">${r.pacing == null ? '—' : r.pacing.toFixed(1) + '%'}</span></td>`);
+    return '<tr>' + cells.join('') + '</tr>';
+  }).join('');
+
+  const totalCells = [
+    '<td><b>Total</b></td>', '<td></td>',
+    `<td class="right proj"><b>${nfMoney.format(T.plan.impressions)}</b></td>`,
+    `<td class="right proj"><b>${nfMoney.format(T.plan.clicks)}</b></td>`,
+    `<td class="right proj"><b>${money2(T.plan.spend)}</b></td>`,
+  ];
+  if (anyDelivery) totalCells.push(
+    `<td class="right"><b>${nfMoney.format(T.delivered.impressions)}</b></td>`,
+    `<td class="right"><b>${nfMoney.format(T.delivered.clicks)}</b></td>`,
+    `<td class="right"><b>${money2(T.delivered.spend)}</b></td>`,
+    `<td class="right"><span class="rp-pace${paceClass(T.pacing)}"><b>${T.pacing == null ? '—' : T.pacing.toFixed(1) + '%'}</b></span></td>`);
+
+  box.innerHTML = `
+    <div class="rp-head">
+      <div class="rp-brand"><div class="mark">DM</div>
+        <div><h2 class="rp-title">${esc(R.client.name)}</h2>
+        <div class="rp-sub">Campaign report · ${esc(R.client.partner || 'Phoenix Ads')}</div></div></div>
+      <div class="rp-meta">
+        <div><b>${esc(period)}</b></div>
+        <div>${R.rows.length} campaign${R.rows.length === 1 ? '' : 's'}</div>
+        <div>Prepared ${R.generated.toISOString().slice(0,10)} by Digital Media Hawkers</div>
+      </div>
+    </div>
+    <div class="rp-disc"><span class="m">Projected</span>
+      <span><b>Columns and figures marked projected are a forecast.</b> They are modelled from the
+      campaign budget and the contracted rate at an expected click-through rate — what the buy is
+      expected to deliver, not a measurement of what it did.
+      ${anyDelivery
+        ? 'Figures marked delivered are reported by ' + esc(R.client.partner || 'the media partner') + '. Pacing compares the two.'
+        : 'No delivery has been imported for these campaigns yet, so this report is a plan only.'}</span></div>
+    <div class="rp-grid">${stats.join('')}</div>
+    <h3 class="rp-h3">By campaign</h3>
+    <div class="table-scroll"><table>
+      <thead><tr>${head.map((h,i) => `<th class="${i>=2 && i<=4 ? 'proj ' : ''}${i>=2 ? 'right' : ''}">${h}</th>`).join('')}</tr></thead>
+      <tbody>${body}</tbody>
+      <tfoot><tr>${totalCells.join('')}</tr></tfoot>
+    </table></div>
+    <div class="rp-foot">
+      Result is counted as clicks on CPM and CPC buys, installs on CPI buys and downloads on CPD buys.
+      This report covers ${esc(outcomeWord.toLowerCase())} as the outcome.
+      Projected daily figures are generated from the budget using the campaign's pacing shape and
+      sum exactly to the flight totals.
+      ${anyDelivery ? 'Delivered figures are whatever has been imported to date and may lag the partner\'s own dashboard.' : ''}
+    </div>`;
+}
+
+$('rpPrint').addEventListener('click', () => window.print());
+$('rpCsv').addEventListener('click', () => {
+  if (!REPORT) return;
+  const R = REPORT;
+  const head = ['Campaign','Campaign ID','Billing','Rate','Flight start','Flight end',
+    'Impressions PROJECTED','Clicks PROJECTED','Spend PROJECTED','CTR PROJECTED %','CPC PROJECTED',
+    'Impressions delivered','Clicks delivered','Spend delivered','CTR delivered %','Pacing % of projection to date'];
+  const body = R.rows.map(r => [r.c.name, r.c.campaignId, r.c.billing, r.c.rate, r.c.startDate, r.c.endDate,
+    r.plan.impressions, r.plan.clicks, r.plan.spend.toFixed(2),
+    r.plan.ctr == null ? '' : r.plan.ctr.toFixed(2), r.plan.cpc.toFixed(4),
+    r.delivered.impressions, r.delivered.clicks, r.delivered.spend.toFixed(2),
+    r.delivered.ctr == null ? '' : r.delivered.ctr.toFixed(2),
+    r.pacing == null ? '' : r.pacing.toFixed(1)]);
+  const banner = [[R.client.name + ' — campaign report'],
+    ['Period: ' + (R.toDateOnly ? 'start of flight to ' + R.generated.toISOString().slice(0,10) : R.from + ' to ' + R.to)],
+    ['Columns marked PROJECTED are modelled from budget and rate. They are a forecast, not measured delivery.'],
+    ['Columns marked delivered are reported by ' + (R.client.partner || 'the media partner') + '.'], []];
+  const csv = [...banner, head, ...body]
+    .map(l => l.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = `${R.client.id}_campaign_report_${R.generated.toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+/* ---------- campaign drawer ---------- */
+let editingCampaign = null;
+
+function calcInputs(){
+  const billing = billingOf($('kdBilling').value);
+  return {
+    billing,
+    budget: +$('kdBudget').value,
+    rate: +$('kdRate').value,
+    ctr: (+$('kdCtr').value) / 100,
+    convRate: BILLING[billing].buys === 'conversions' ? (+$('kdInstallRate').value) / 100 : 0,
+  };
+}
+
+/** Runs on every keystroke, so the trade-offs are visible before saving. */
+function updateCalc(){
+  const box = $('kdCalc'), grid = $('kdCalcGrid'), note = $('kdCalcNote');
+  const billing = billingOf($('kdBilling').value);
+  const B = BILLING[billing];
+  const needsConv = B.buys === 'conversions';
+  $('kdInstallWrap').hidden = !needsConv;
+  $('kdRateLabel').textContent = B.rateLabel;
+  $('kdRateHelp').textContent = B.rateHelp;
+  $('kdConvLabel').textContent = 'Expected ' + B.one + ' rate %';
+  $('kdConvHelp').textContent = B.label + ' as a share of clicks.';
+
+  let t;
+  try { t = deriveTargets(calcInputs()); }
+  catch (err){
+    box.className = 'calc bad';
+    grid.innerHTML = '';
+    note.textContent = err.message;
+    return null;
+  }
+  box.className = 'calc';
+
+  const start = $('kdStart').value, end = $('kdEnd').value;
+  const days = (start && end && new Date(end) >= new Date(start)) ? dayCount(start, end) : 0;
+  const per = days ? {
+    spend: (+$('kdBudget').value) / days,
+    impressions: t.impressions / days,
+    clicks: t.clicks / days,
+  } : null;
+
+  // Show the contracted rate plainly and the derived ones as "implied", so it
+  // is obvious which number came off the insertion order.
+  const cells = [['Impressions', nfMoney.format(t.impressions)],
+                 ['Clicks', nfMoney.format(t.clicks)]];
+  if (needsConv) cells.push([B.label, nfMoney.format(t.conversions)]);
+  cells.push([billing === 'cpm' ? 'CPM (contracted)' : 'Implied CPM', '$' + t.cpm.toFixed(2)]);
+  cells.push([billing === 'cpc' ? 'CPC (contracted)' : 'Implied CPC', '$' + t.cpc.toFixed(4)]);
+  if (needsConv) cells.push(['Cost per ' + B.one + ' (contracted)', '$' + t.cpa.toFixed(4)]);
+  if (per){
+    cells.push(['Per day', '$' + per.spend.toFixed(2)],
+               ['Impressions/day', nfMoney.format(Math.round(per.impressions))]);
+  }
+  grid.innerHTML = cells.map(([k, v]) =>
+    `<div class="calc-cell"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+
+  const identity = 'CPM = CPC × CTR × 1000, so the rates marked implied follow from the contracted ' +
+    'rate and your expected rates rather than being set independently.';
+  note.innerHTML = days
+    ? `Spread across <b>${days} days</b>. ` + identity
+    : 'Set the flight dates to see the daily breakdown. ' + identity;
+  return t;
+}
+
+['kdBudget','kdRate','kdCtr','kdInstallRate','kdStart','kdEnd'].forEach(id =>
+  document.addEventListener('input', e => { if (e.target.id === id) updateCalc(); }));
+['kdBilling','kdShape'].forEach(id =>
+  document.addEventListener('change', e => { if (e.target.id === id) updateCalc(); }));
+
+function openCampaign(id){
+  editingCampaign = id ? CAMPAIGNS.find(c => c.campaignId === id) : null;
+  const c = editingCampaign;
+  $('kdTitle').textContent = c ? 'Edit ' + c.name : 'New campaign';
+  $('kdClient').innerHTML = CLIENTS.map(x =>
+    `<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.id)})</option>`).join('');
+  $('kdClient').value = c ? c.clientId : (CLIENTS[0] ? CLIENTS[0].id : '');
+  $('kdId').value = c ? c.campaignId : '';
+  $('kdId').disabled = !!c;
+  $('kdName').value = c ? c.name : '';
+  $('kdBilling').value = c ? c.billing : 'cpm';
+  $('kdRate').value = c ? c.rate : '';
+  $('kdBudget').value = c ? c.budget : '';
+  $('kdCtr').value = c ? (c.ctr * 100).toFixed(2) : '';
+  const cRate = c ? (c.convRate != null ? c.convRate : c.installRate) : 0;
+  $('kdInstallRate').value = cRate ? (cRate * 100).toFixed(1) : '';
+  $('kdStart').value = c ? c.startDate : '';
+  $('kdEnd').value = c ? c.endDate : '';
+  $('kdShape').value = c ? (c.shape || 'even') : 'weekday';
+  $('kdObjective').value = c ? (c.objective || '') : '';
+  $('kdNote').hidden = true;
+  updateCalc();
+  openDrawer('campaignDrawer');
+  setTimeout(() => (c ? $('kdName') : $('kdId')).focus(), 220);
+}
+$('btnNewCampaign').addEventListener('click', () => {
+  if (!CLIENTS.length){ toast('Create a client first — a campaign has to belong to one.'); return; }
+  openCampaign(null);
+});
+document.addEventListener('click', e => {
+  const ed = e.target.closest('[data-edit-campaign]');
+  if (ed) openCampaign(ed.dataset.editCampaign);
+});
+
+$('kdSave').addEventListener('click', async () => {
+  if (!updateCalc()) return;
+  const btn = $('kdSave'); btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const i = calcInputs();
+    const r = await api('admin.saveCampaign', {
+      clientId: $('kdClient').value,
+      campaignId: (editingCampaign ? editingCampaign.campaignId : $('kdId').value.trim()),
+      name: $('kdName').value.trim(),
+      billing: i.billing, rate: i.rate, ctr: i.ctr, convRate: i.convRate,
+      budget: i.budget, startDate: $('kdStart').value, endDate: $('kdEnd').value,
+      shape: $('kdShape').value, objective: $('kdObjective').value.trim(),
+    });
+    await refreshAll(); closeDrawers();
+    toast(r.created
+      ? `${r.campaignId} created — projection runs ${r.days} days.`
+      : `${r.campaignId} updated — projection recalculated.`);
+  }catch(err){ note($('kdNote'), 'bad', esc(err.message)); }
+  finally{ btn.disabled = false; btn.textContent = 'Save campaign'; }
+});
+
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-del-campaign]'); if (!t) return;
+  const c = CAMPAIGNS.find(c => c.campaignId === t.dataset.delCampaign);
+  if (!c) return;
+  const warn = c.actualDays
+    ? `Delete ${c.name}? This also removes ${c.actualDays} days of imported delivery.`
+    : `Delete ${c.name}?`;
+  if (!confirm(warn)) return;
+  try{
+    await api('admin.deleteCampaign', {campaignId: c.campaignId});
+    await refreshAll();
+    toast(`${c.campaignId} deleted.`);
+  }catch(err){ toast(err.message); }
+});
+
+/* ---------- delivery import ---------- */
+$('btnImport').addEventListener('click', () => {
+  if (!CAMPAIGNS.length){ toast('Create a campaign first, so imported rows have somewhere to land.'); return; }
+  $('imCsv').value = ''; $('imNote').hidden = true;
+  openDrawer('importDrawer');
+  setTimeout(() => $('imCsv').focus(), 220);
+});
+
+function parseCsv(text){
+  const out = [];
+  for (const raw of String(text).split(/\r?\n/)){
+    const line = raw.trim();
+    if (!line) continue;
+    const cells = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+    if (/^date$/i.test(cells[0])) continue;                 // header row
+    if (cells.length < 4) continue;
+    out.push({date: cells[0], campaignId: cells[1], impressions: cells[2],
+              clicks: cells[3], spend: cells[4] || 0, downloads: cells[5] || 0});
+  }
+  return out;
+}
+
+$('imSave').addEventListener('click', async () => {
+  const rows = parseCsv($('imCsv').value);
+  if (!rows.length){ note($('imNote'), 'bad', 'Nothing to import — paste rows first.'); return; }
+  const btn = $('imSave'); btn.disabled = true; btn.textContent = 'Importing…';
+  try{
+    const r = await api('admin.importActuals', {rows});
+    await refreshAll();
+    note($('imNote'), r.skipped ? 'bad' : 'ok',
+      `<b>${r.written} row${r.written === 1 ? '' : 's'} imported.</b>` +
+      (r.skipped ? ` ${r.skipped} skipped — those campaign IDs do not exist yet.` : ''));
+    if (!r.skipped) setTimeout(closeDrawers, 900);
+    toast(`${r.written} days of delivery imported.`);
+  }catch(err){ note($('imNote'), 'bad', esc(err.message)); }
+  finally{ btn.disabled = false; btn.textContent = 'Import'; }
+});
+
+/* ---------- user drawer ---------- */
+let editingUser = null;
+function openUser(email){
+  editingUser = email ? USERS.find(u => u.email === email) : null;
+  const u = editingUser;
+  $('udTitle').textContent = u ? 'Edit ' + u.email : 'New login';
+  $('udEmail').value = u ? u.email : '';
+  $('udEmail').disabled = !!u;
+  $('udName').value = u ? u.name : '';
+  $('udRole').value = u ? u.role : 'client';
+  $('udActive').checked = u ? !!u.active : true;
+  $('udPw').value = '';
+  $('udPwHelp').textContent = u
+    ? 'Leave blank to keep the current password. Fill it in to reset.'
+    : 'Send it over a different channel than the email they log in with.';
+  const opts = CLIENTS.map(c => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.id)})</option>`).join('');
+  $('udClient').innerHTML = opts + '<option value="ALL">Every client — DMH staff</option>';
+  $('udClient').value = u ? u.clientId : (CLIENTS[0] ? CLIENTS[0].id : 'ALL');
+  $('udNote').hidden = true;
+  openDrawer('userDrawer');
+  setTimeout(() => (u ? $('udName') : $('udEmail')).focus(), 220);
+}
+$('btnNewUser').addEventListener('click', () => {
+  if (!CLIENTS.length){ toast('Create a client first — a login has to point at one.'); return; }
+  openUser(null);
+});
+document.addEventListener('click', e => {
+  const ed = e.target.closest('[data-edit-user]');
+  if (ed) openUser(ed.dataset.editUser);
+});
+$('udGen').addEventListener('click', () => {
+  const words = 'harbour|kestrel|tundra|marble|cobalt|jasper|willow|orbit|copper|meadow|falcon|amber'.split('|');
+  const pick = () => words[Math.floor(Math.random() * words.length)];
+  $('udPw').value = pick() + '-' + pick() + '-' + Math.floor(100 + Math.random() * 900);
+});
+$('udSave').addEventListener('click', async () => {
+  const btn = $('udSave'); btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const r = await api('admin.saveUser', {
+      email: (editingUser ? editingUser.email : $('udEmail').value.trim()),
+      name: $('udName').value.trim(),
+      clientId: $('udClient').value,
+      role: $('udRole').value,
+      password: $('udPw').value,
+      active: $('udActive').checked,
+    });
+    await refreshAll(); closeDrawers();
+    toast(r.created ? `${r.email} can now sign in.` :
+          r.passwordChanged ? `${r.email} updated — password reset.` : `${r.email} updated.`);
+  }catch(err){ note($('udNote'), 'bad', esc(err.message)); }
+  finally{ btn.disabled = false; btn.textContent = 'Save login'; }
+});
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-toggle-user]'); if (!t) return;
+  const u = USERS.find(u => u.email === t.dataset.toggleUser);
+  try{
+    await api('admin.userActive', {email:u.email, active: !u.active});
+    await refreshAll();
+    toast(u.active ? `${u.email} disabled — takes effect immediately.` : `${u.email} enabled.`);
+  }catch(err){ toast(err.message); }
+});
+</script>
+</body>
+</html>
