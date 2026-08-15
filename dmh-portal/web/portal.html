@@ -1066,7 +1066,7 @@ function render(){
   if (!haveActuals) state.view = 'projected';
   [...document.getElementById('views').children].forEach(b => {
     b.classList.toggle('active', b.dataset.v === state.view);
-    b.disabled = !haveActuals && b.dataset.v !== 'projected';
+    b.disabled = !haveActuals && b.dataset.v !== 'pacing';
   });
 
   const projBar = document.getElementById('projBar');
@@ -1080,7 +1080,7 @@ function render(){
         'deliverd ' +
         (haveActuals ? 'Switch to Delivered for the figures reported by ' + (RAW.client.partner || 'the media partner') + '.'
                      : 'No delivery has been reported for this account yet.')
-      : '<b>Amber columns and the dashed line are projections</b>from budget and rate, not measured. ' +
+      : '<b>Amber columns and the dashed line </b>from budget and rate, not measured. ' +
         'Figures marked delivered come from ' + (RAW.client.partner || 'the media partner') + '. ' +
         'Pacing compares the two.';
   }
