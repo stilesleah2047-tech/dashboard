@@ -87,6 +87,19 @@ td.right, th.right{text-align:right}
 .empty{padding:44px 20px; text-align:center; color:var(--muted)}
 .empty b{display:block; font-family:var(--display); color:var(--ink); margin-bottom:4px}
 
+.imp-tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:18px}
+.imp-tab{background:none; border:none; padding:8px 14px; font-size:13.5px; font-weight:500;
+  color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px}
+.imp-tab:hover{color:var(--ink)}
+.imp-tab.active{color:var(--ink); font-weight:600; border-bottom-color:var(--ink); font-family:var(--display)}
+.needs-import{border-color:#F2DCBB !important; background:#FFF6E9 !important; color:#8A5A16 !important}
+.needs-import:hover{background:#FDEDD6 !important}
+.import-banner{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0 20px 16px;
+  padding:11px 15px; border-radius:var(--radius-sm); background:#FFF6E9; border:1px solid #F2DCBB;
+  color:#7A4E11; font-size:12.8px; line-height:1.5}
+.import-banner b{font-family:var(--display)}
+.import-banner button{margin-left:auto}
+
 /* reports */
 .report-controls{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; padding:16px 20px;
   border-bottom:1px solid var(--line-soft)}
@@ -194,7 +207,7 @@ textarea:hover{border-color:#CBD3E2}
 <!-- ============ APP ============ -->
 <div id="app">
 <div class="demo-strip" id="demoStrip" hidden>
-  <!--<b>Demo mode</b> — nothing is written to a real sheet. Add your Apps Script URL to <b>CONFIG.apiUrl</b> to go live.-->
+  <b>Demo mode</b> — nothing is written to a real sheet. Add your Apps Script URL to <b>CONFIG.apiUrl</b> to go live.
 </div>
 <header class="topbar">
   <div class="brand">
@@ -247,6 +260,7 @@ textarea:hover{border-color:#CBD3E2}
       <button class="btn-ghost" id="btnImport">Import partner delivery</button>
       <button class="btn-primary" id="btnNewCampaign">New campaign</button>
     </div>
+    <div class="import-banner" id="importBanner" hidden></div>
     <div class="table-scroll">
       <table>
         <thead><tr>
@@ -431,16 +445,58 @@ textarea:hover{border-color:#CBD3E2}
   <div class="drawer-head"><h2>Import partner delivery</h2><button class="close" data-close>×</button></div>
   <div class="drawer-body">
     <div class="note info">
-      <b>This is the only way delivery figures enter the system.</b> Paste the media partner's
-      export. Rows whose campaign ID is unknown are skipped, and re-importing a day corrects
-      it rather than duplicating it.
+      <b>This is the only way delivery figures enter the system.</b> Re-importing a date
+      corrects it rather than duplicating it.
     </div>
-    <div class="note" id="imNote" hidden></div>
-    <div class="f">
-      <label for="imCsv">Paste CSV</label>
-      <textarea id="imCsv" rows="11" placeholder="date,campaign_id,impressions,clicks,spend,downloads
+
+    <div class="imp-tabs" id="impTabs">
+      <button class="imp-tab active" data-m="daily">Daily rows</button>
+      <button class="imp-tab" data-m="window">Range total</button>
+    </div>
+
+    <div id="impDaily">
+      <div class="note" id="imNote" hidden></div>
+      <div class="f">
+        <label for="imCsv">Paste the export</label>
+        <textarea id="imCsv" rows="10" placeholder="date,campaign_id,impressions,clicks,spend,downloads
 2026-08-04,41040,84210,2914,126.32,0"></textarea>
-      <div class="help">Header row optional. Order: date, campaign_id, impressions, clicks, spend, downloads.</div>
+        <div class="help">One row per campaign per day. Column order does not matter if there is a
+        header row — the partner's own column names are recognised. Tabs and semicolons work too.</div>
+      </div>
+    </div>
+
+    <div id="impWindow" hidden>
+      <div class="note info">
+        <b>For exports that only give a total for a date range.</b> The totals you enter are kept
+        exactly. Because the partner has not said how they fell day by day, the figures are spread
+        evenly and each day is marked <b>estimated</b> on the client's dashboard. Any day that
+        already has a real daily figure is left untouched.
+      </div>
+      <div class="note" id="iwNote" hidden></div>
+      <div class="f">
+        <label for="iwCampaign">Campaign</label>
+        <select id="iwCampaign"></select>
+      </div>
+      <div class="f-row">
+        <div class="f"><label for="iwStart">From</label><input id="iwStart" type="date"></div>
+        <div class="f"><label for="iwEnd">To</label><input id="iwEnd" type="date"></div>
+      </div>
+      <div class="f-row">
+        <div class="f"><label for="iwImpr">Impressions in that range</label>
+          <input id="iwImpr" type="number" min="0" step="1" placeholder="607552"></div>
+        <div class="f"><label for="iwClicks">Clicks</label>
+          <input id="iwClicks" type="number" min="0" step="1" placeholder="21793"></div>
+      </div>
+      <div class="f-row">
+        <div class="f"><label for="iwSpend">Spend</label>
+          <input id="iwSpend" type="number" min="0" step="0.01" placeholder="911.33"></div>
+        <div class="f"><label for="iwDl">Installs / downloads</label>
+          <input id="iwDl" type="number" min="0" step="1" placeholder="0"></div>
+      </div>
+      <div class="calc" id="iwCalc"><div class="calc-head">Per day</div>
+        <div class="calc-grid" id="iwGrid"></div>
+        <div class="calc-note" id="iwCalcNote">Pick a campaign and a range.</div>
+      </div>
     </div>
   </div>
   <div class="drawer-foot">
@@ -629,6 +685,17 @@ function demoApi(action, body){
       DEMO.campaigns = DEMO.campaigns.filter(c => c.campaignId !== String(body.campaignId));
       return resolve({ok:true});
     }
+    if (action === 'admin.importWindow'){
+      const c = DEMO.campaigns.find(c => c.campaignId === String(body.campaignId));
+      if (!c) return fail('No campaign with ID ' + body.campaignId + '.');
+      if (!body.startDate || !body.endDate) return fail('Pick a date range.');
+      if (new Date(body.endDate) < new Date(body.startDate)) return fail('The end date falls before the start date.');
+      const t = ['impressions','clicks','spend','downloads'].reduce((a,k) => a + (+body[k] || 0), 0);
+      if (!t) return fail('Enter at least one figure to spread across the range.');
+      const days = dayCount(body.startDate, body.endDate);
+      c.actualDays = Math.max(c.actualDays || 0, days);
+      return resolve({ok:true, written:days, days, spreadAcross:days, skipped:0, note:''});
+    }
     if (action === 'admin.importActuals'){
       const rows = body.rows || [];
       const known = new Set(DEMO.campaigns.map(c => c.campaignId));
@@ -809,14 +876,33 @@ function fmtDate(d){
 function paintCampaigns(){
   $('kCount').textContent = CAMPAIGNS.length || '';
   $('campaignEmpty').hidden = !!CAMPAIGNS.length;
+
+  // One line at the top of the tab, so the gap is obvious at a glance.
+  const waiting = CAMPAIGNS.filter(c => !c.actualDays);
+  const banner = $('importBanner');
+  if (waiting.length){
+    const who = [...new Set(waiting.map(c => c.clientId))];
+    banner.hidden = false;
+    banner.innerHTML =
+      `<span><b>${waiting.length} campaign${waiting.length === 1 ? ' has' : 's have'} no delivery imported.</b> ` +
+      `${who.length === 1 ? who[0] + ' sees' : 'Those clients see'} a projection only — Delivered and Pacing ` +
+      `stay locked on their dashboard until partner figures arrive.</span>` +
+      `<button class="btn-primary btn-sm" id="bannerImport">Import delivery</button>`;
+    $('bannerImport').addEventListener('click', () => openImport());
+  } else {
+    banner.hidden = true;
+  }
   const today = new Date().toISOString().slice(0,10);
   $('campaignRows').innerHTML = CAMPAIGNS.map(c => {
     const client = CLIENTS.find(x => x.id === c.clientId);
     const t = c.targets || {};
     const status = c.endDate < today ? ['off','Ended'] : c.startDate > today ? ['warn','Scheduled'] : ['on','Live'];
+    // Until delivery is imported, the client's Delivered and Pacing views stay
+    // locked. Make that visible here rather than letting them discover it.
     const delivery = c.actualDays
       ? `<b>${c.actualDays}</b> day${c.actualDays === 1 ? '' : 's'}<div class="sub">imported from partner</div>`
-      : '<span class="pill warn">None yet</span><div class="sub">projection only</div>';
+      : `<button class="btn-ghost btn-sm needs-import" data-import-for="${esc(c.campaignId)}">Import delivery</button>
+         <div class="sub">client sees projection only</div>`;
     return `<tr>
       <td><b>${esc(c.name)}</b>
         <div class="sub">${esc(c.campaignId)} · ${esc(String(c.billing).toUpperCase())} at ${esc(c.rate)}
@@ -1299,29 +1385,186 @@ document.addEventListener('click', async e => {
 });
 
 /* ---------- delivery import ---------- */
-$('btnImport').addEventListener('click', () => {
-  if (!CAMPAIGNS.length){ toast('Create a campaign first, so imported rows have somewhere to land.'); return; }
-  $('imCsv').value = ''; $('imNote').hidden = true;
-  openDrawer('importDrawer');
-  setTimeout(() => $('imCsv').focus(), 220);
+$('btnImport').addEventListener('click', openImport);
+
+/**
+ * Parse a partner export.
+ *
+ * Column order varies between exports, so if there is a header row it is used
+ * to find the fields by name; otherwise the documented order is assumed. Tabs
+ * and semicolons work as well as commas, since that is what a paste out of a
+ * spreadsheet often produces.
+ */
+const FIELD_ALIASES = {
+  date:        ['date', 'day', 'reportdate', 'report_date', 'time', 'datetime'],
+  campaignId:  ['campaignid', 'campaign_id', 'campaign', 'campaignname', 'campaign_name', 'campaginid', 'id'],
+  impressions: ['impressions', 'impression', 'impr', 'imps', 'views'],
+  clicks:      ['clicks', 'click'],
+  spend:       ['spend', 'cost', 'cpm_spent', 'cpd_spent', 'spent', 'amount', 'budget'],
+  downloads:   ['downloads', 'download', 'installs', 'install', 'conversions', 'conversion'],
+};
+function splitRow(line){
+  const delim = line.includes('\t') ? '\t' : (line.split(';').length > line.split(',').length ? ';' : ',');
+  return line.split(delim).map(c => c.trim().replace(/^"|"$/g, ''));
+}
+function parseCsv(text){
+  const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return {rows: [], note: ''};
+
+  const norm = v => String(v).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const first = splitRow(lines[0]).map(norm);
+  const map = {};
+  for (const [field, names] of Object.entries(FIELD_ALIASES)){
+    // normalise both sides, so cpm_Spent and "CPM Spent" both match cpm_spent
+    const want = names.map(norm);
+    const i = first.findIndex(h => want.includes(h));
+    if (i > -1) map[field] = i;
+  }
+  const hasHeader = map.date != null && map.campaignId != null;
+  const idx = hasHeader ? map : {date:0, campaignId:1, impressions:2, clicks:3, spend:4, downloads:5};
+
+  const rows = [];
+  let skipped = 0;
+  for (const line of lines.slice(hasHeader ? 1 : 0)){
+    const c = splitRow(line);
+    if (c.length < 3) { skipped++; continue; }
+    const get = f => (idx[f] == null ? '' : (c[idx[f]] || ''));
+    if (!get('date') || !get('campaignId')) { skipped++; continue; }
+    rows.push({date: get('date'), campaignId: get('campaignId'),
+      impressions: get('impressions') || 0, clicks: get('clicks') || 0,
+      spend: get('spend') || 0, downloads: get('downloads') || 0});
+  }
+  const found = Object.keys(idx).filter(k => idx[k] != null);
+  return {rows, note: hasHeader
+    ? 'Matched columns by header: ' + found.join(', ') + '.'
+    : 'No header row found — assuming date, campaign_id, impressions, clicks, spend, downloads.',
+    skipped};
+}
+
+let importMode = 'daily';
+function setImportMode(m){
+  importMode = m;
+  [...$('impTabs').children].forEach(b => b.classList.toggle('active', b.dataset.m === m));
+  $('impDaily').hidden = m !== 'daily';
+  $('impWindow').hidden = m !== 'window';
+  $('imSave').textContent = m === 'window' ? 'Spread across the range' : 'Import';
+}
+$('impTabs').addEventListener('click', e => {
+  const b = e.target.closest('.imp-tab'); if (b) setImportMode(b.dataset.m);
 });
 
-function parseCsv(text){
-  const out = [];
-  for (const raw of String(text).split(/\r?\n/)){
-    const line = raw.trim();
-    if (!line) continue;
-    const cells = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-    if (/^date$/i.test(cells[0])) continue;                 // header row
-    if (cells.length < 4) continue;
-    out.push({date: cells[0], campaignId: cells[1], impressions: cells[2],
-              clicks: cells[3], spend: cells[4] || 0, downloads: cells[5] || 0});
+function openImport(campaignId){
+  if (!CAMPAIGNS.length){ toast('Create a campaign first, so imported rows have somewhere to land.'); return; }
+  $('imCsv').value = ''; $('imNote').hidden = true; $('iwNote').hidden = true;
+  ['iwImpr','iwClicks','iwSpend','iwDl'].forEach(id => { $(id).value = ''; });
+  $('iwCampaign').innerHTML = CAMPAIGNS.map(c => {
+    const client = CLIENTS.find(x => x.id === c.clientId);
+    return `<option value="${esc(c.campaignId)}">${esc(c.name)} — ${esc(client ? client.name : c.clientId)}</option>`;
+  }).join('');
+  // Setting innerHTML does not always select the first option, so be explicit.
+  $('iwCampaign').selectedIndex = 0;
+  if (campaignId) $('iwCampaign').value = String(campaignId);
+  if (!$('iwCampaign').value && $('iwCampaign').options.length){
+    $('iwCampaign').value = $('iwCampaign').options[0].value;
   }
-  return out;
+  $('iwStart').value = ''; $('iwEnd').value = '';
+  syncWindowDates();
+  setImportMode('daily');
+  openDrawer('importDrawer');
+  setTimeout(() => $('imCsv').focus(), 220);
+}
+
+/** Default the range to the campaign's own flight, clipped to today. */
+function syncWindowDates(){
+  const c = CAMPAIGNS.find(x => String(x.campaignId) === String($('iwCampaign').value));
+  if (!c) return;
+  const today = new Date().toISOString().slice(0,10);
+  // Set the values first — a date input rejects a value outside min/max.
+  if (!$('iwStart').value || $('iwStart').value < c.startDate || $('iwStart').value > c.endDate){
+    $('iwStart').value = c.startDate;
+  }
+  const end = c.endDate < today ? c.endDate : today;
+  if (!$('iwEnd').value || $('iwEnd').value < c.startDate || $('iwEnd').value > c.endDate){
+    $('iwEnd').value = end < c.startDate ? c.startDate : end;
+  }
+  $('iwStart').min = c.startDate; $('iwStart').max = c.endDate;
+  $('iwEnd').min = c.startDate;   $('iwEnd').max = c.endDate;
+  updateWindowCalc();
+}
+$('iwCampaign').addEventListener('change', () => { $('iwStart').value=''; $('iwEnd').value=''; syncWindowDates(); });
+
+/** Show the daily figures before writing them, so the split is never a surprise. */
+function updateWindowCalc(){
+  const grid = $('iwGrid'), note = $('iwCalcNote'), box = $('iwCalc');
+  const a = $('iwStart').value, b = $('iwEnd').value;
+  if (!a || !b || new Date(b) < new Date(a)){
+    box.className = 'calc bad'; grid.innerHTML = '';
+    note.textContent = a && b ? 'The end date falls before the start date.' : 'Pick a campaign and a range.';
+    return null;
+  }
+  box.className = 'calc';
+  const days = dayCount(a, b);
+  const t = {
+    impressions: +$('iwImpr').value || 0, clicks: +$('iwClicks').value || 0,
+    spend: +$('iwSpend').value || 0, downloads: +$('iwDl').value || 0,
+  };
+  const per = k => t[k] ? (k === 'spend' ? '$' + (t[k]/days).toFixed(2) : nfMoney.format(Math.round(t[k]/days))) : '—';
+  grid.innerHTML = [
+    ['Days', days], ['Impressions/day', per('impressions')], ['Clicks/day', per('clicks')],
+    ['Spend/day', per('spend')], ['Installs/day', per('downloads')],
+  ].map(([k,v]) => `<div class="calc-cell"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  note.innerHTML = `Totals are kept exactly; only the split across the <b>${days} days</b> is estimated, ` +
+    `and each of those days is labelled as such on the client's dashboard.`;
+  return {days, totals: t};
+}
+['iwStart','iwEnd','iwImpr','iwClicks','iwSpend','iwDl'].forEach(id =>
+  document.addEventListener('input', e => { if (e.target.id === id) updateWindowCalc(); }));
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-import-for]');
+  if (t) openImport(t.dataset.importFor);
+});
+
+// Show what the paste was understood as, before anything is written.
+$('imCsv').addEventListener('input', () => {
+  const {rows, note: how} = parseCsv($('imCsv').value);
+  if (!rows.length){ $('imNote').hidden = true; return; }
+  const known = new Set(CAMPAIGNS.map(c => String(c.campaignId)));
+  const unknown = rows.filter(r => !known.has(String(r.campaignId).trim()));
+  note($('imNote'), unknown.length ? 'bad' : 'ok',
+    `<b>${rows.length} row${rows.length === 1 ? '' : 's'} read.</b> ${esc(how)}` +
+    (unknown.length
+      ? ` ${unknown.length} reference a campaign ID that does not exist yet ` +
+        `(${esc([...new Set(unknown.map(r => r.campaignId))].slice(0, 3).join(', '))}) and will be skipped.`
+      : ' All campaign IDs match.'));
+});
+
+async function saveWindow(){
+  const calc = updateWindowCalc();
+  if (!calc) return;
+  const t = calc.totals;
+  if (!t.impressions && !t.clicks && !t.spend && !t.downloads){
+    note($('iwNote'), 'bad', 'Enter at least one figure to spread across the range.'); return;
+  }
+  const btn = $('imSave'); btn.disabled = true; btn.textContent = 'Spreading…';
+  try{
+    const r = await api('admin.importWindow', {
+      campaignId: $('iwCampaign').value,
+      startDate: $('iwStart').value, endDate: $('iwEnd').value,
+      impressions: t.impressions, clicks: t.clicks, spend: t.spend, downloads: t.downloads,
+    });
+    await refreshAll();
+    note($('iwNote'), 'ok',
+      `<b>Spread across ${r.spreadAcross} day${r.spreadAcross === 1 ? '' : 's'}.</b> ` +
+      `The totals are exact; those days show as estimated on the dashboard.` +
+      (r.note ? ' ' + esc(r.note) : ''));
+    toast(`${r.written} day${r.written === 1 ? '' : 's'} written from the range total.`);
+  }catch(err){ note($('iwNote'), 'bad', esc(err.message)); }
+  finally{ btn.disabled = false; btn.textContent = 'Spread across the range'; }
 }
 
 $('imSave').addEventListener('click', async () => {
-  const rows = parseCsv($('imCsv').value);
+  if (importMode === 'window') return saveWindow();
+  const {rows} = parseCsv($('imCsv').value);
   if (!rows.length){ note($('imNote'), 'bad', 'Nothing to import — paste rows first.'); return; }
   const btn = $('imSave'); btn.disabled = true; btn.textContent = 'Importing…';
   try{
