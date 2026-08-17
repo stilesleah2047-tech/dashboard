@@ -2,14 +2,18 @@
   "name": "dmh-reporting",
   "version": "2.0.0",
   "private": true,
-  "description": "Digital Media Hawkers client reporting — media plans, delivery tracking and pacing",
+  "description": "Digital Media Hawkers client reporting \u2014 media plans, delivery tracking and pacing",
   "main": "src/server.js",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node src/server.js",
-    "test": "node test/run.js"
+    "test": "node test/run.js",
+    "db:check": "node src/dbcheck.js",
+    "db:migrate": "node src/migrate.js"
   },
-  "optionalDependencies": {
-    "mongodb": "^6.3.0"
+  "dependencies": {
+    "mongodb": "^6.21.0"
   }
 }
