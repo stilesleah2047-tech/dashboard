@@ -136,15 +136,34 @@ function memoryStore(persistPath) {
 
 /* ── mongodb ───────────────────────────────────────────────────────────── */
 function mongoStore(uri, dbName) {
-  const { MongoClient } = require('mongodb');
-  const client = new MongoClient(uri);
+  let MongoClient;
+  try {
+    MongoClient = require('mongodb').MongoClient;
+  } catch (err) {
+    throw new Error(
+      'MONGODB_URI is set but the MongoDB driver is not installed.\n' +
+      '  Run this once, inside the server folder:\n\n' +
+      '    npm install mongodb\n');
+  }
+
+  // serverSelectionTimeoutMS keeps a wrong host from hanging the boot for 30s.
+  const client = new MongoClient(uri, {
+    serverSelectionTimeoutMS: Number(process.env.MONGO_TIMEOUT_MS || 8000),
+    retryWrites: true,
+  });
   let db = null;
   const strip = d => { if (d) delete d._id; return d; };
 
   return {
     kind: 'mongodb',
+    uri,
     async init() {
-      await client.connect();
+      try {
+        await client.connect();
+        await client.db(dbName || 'dmh_reporting').command({ ping: 1 });
+      } catch (err) {
+        throw new Error('Could not reach MongoDB.\n' + mongoHint(err, uri));
+      }
       db = client.db(dbName || 'dmh_reporting');
       await db.collection('clients').createIndex({ code: 1 }, { unique: true });
       await db.collection('users').createIndex({ email: 1 }, { unique: true });
@@ -231,6 +250,36 @@ function mongoStore(uri, dbName) {
   };
 }
 
+/** Turn a driver error into the thing the person actually needs to change. */
+function mongoHint(err, uri) {
+  const m = String(err && err.message || err);
+  const atlas = /mongodb\+srv/.test(String(uri));
+  const lines = ['  ' + m.split('\n')[0]];
+  if (/Authentication failed|bad auth/i.test(m)) {
+    lines.push('', '  The host answered, so the URI is right but the username or password is not.',
+      '  Check the database user in Atlas under Database Access.',
+      '  A password with @ : / ? # or % in it must be percent-encoded in the URI.');
+  } else if (/ENOTFOUND|getaddrinfo|querySrv/i.test(m)) {
+    lines.push('', '  That hostname does not resolve. Copy the connection string again from Atlas',
+      '  (Connect → Drivers), or check for a typo.');
+  } else if (/ECONNREFUSED/i.test(m)) {
+    lines.push('', atlas
+      ? '  The connection was refused. Unusual for Atlas — check the port in the URI.'
+      : '  Nothing is listening there. Is MongoDB running?\n' +
+        '    macOS   brew services start mongodb-community\n' +
+        '    Linux   sudo systemctl start mongod\n' +
+        '    Windows net start MongoDB');
+  } else if (/timed out|ServerSelectionTimeout/i.test(m)) {
+    lines.push('', atlas
+      ? '  Reached the network but not the cluster. Nine times out of ten this is the IP\n' +
+        '  allowlist: Atlas → Network Access → Add IP Address → your server\'s address.'
+      : '  Reached the host but got no answer. Is MongoDB running and listening on that port?');
+  } else if (/Invalid scheme|Invalid connection string/i.test(m)) {
+    lines.push('', '  The URI must start with mongodb:// or mongodb+srv://');
+  }
+  return lines.join('\n');
+}
+
 function createStore() {
   const uri = process.env.MONGODB_URI;
   if (uri) return mongoStore(uri, process.env.MONGODB_DB);
@@ -239,4 +288,4 @@ function createStore() {
     path.resolve(__dirname, '..', 'data.json'));
 }
 
-module.exports = { createStore, memoryStore, mongoStore };
+module.exports = { createStore, memoryStore, mongoStore, mongoHint };
