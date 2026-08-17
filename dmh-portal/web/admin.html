@@ -125,6 +125,19 @@ td.right, th.right{text-align:right}
 .rp-stat .v{font-family:var(--display); font-weight:600; font-size:21px; letter-spacing:-.025em; margin-top:3px}
 .rp-stat .n{font-size:11.5px; color:var(--muted-2); margin-top:2px}
 .rp-h3{font-family:var(--display); font-size:13px; font-weight:600; margin:0 0 10px; letter-spacing:-.01em}
+.rp-chart{border:1px solid var(--line); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:10px}
+.rp-chart svg{display:block; width:100%; height:auto}
+.rp-legend{display:flex; gap:18px; flex-wrap:wrap; font-size:11.5px; color:var(--muted); margin-bottom:22px}
+.rp-legend span{display:flex; align-items:center; gap:7px}
+.rp-legend .ln{width:18px; height:0; border-top-width:2px; display:inline-block}
+.rp-legend .ln.proj{border-top:2px dashed #FF8A3D}
+.rp-legend .ln.del{border-top:2px solid #2C5CF6}
+.rp-legend .est-note{color:var(--muted-2)}
+.rp-variance{border-radius:var(--radius-sm); padding:11px 14px; margin-bottom:20px; font-size:12.8px; line-height:1.55}
+.rp-variance b{font-family:var(--display)}
+.rp-variance.on{background:#E9F8F3; border:1px solid #C4E9DD; color:#0B6B58}
+.rp-variance.over{background:#EEF2FE; border:1px solid #D9E1FB; color:#2B3E86}
+.rp-variance.under{background:#FEF2F4; border:1px solid #F9D4DC; color:#B4243F}
 #report table{margin-bottom:20px}
 #report thead th{font-size:11px}
 #report thead th.proj{background:#6B430D}
@@ -142,8 +155,10 @@ td.right, th.right{text-align:right}
   .wrap{padding:0; max-width:none}
   .panel{border:none; box-shadow:none; margin:0}
   #report{padding:0}
-  .rp-disc, .rp-disc .m, #report thead th, #report thead th.proj, #report td.proj, .rp-stat.proj{
+  .rp-disc, .rp-disc .m, #report thead th, #report thead th.proj, #report td.proj, .rp-stat.proj,
+  .rp-variance, .rp-chart{
     -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  .rp-chart{break-inside:avoid}
   #report table{break-inside:auto}
   tr{break-inside:avoid}
 }
@@ -1111,7 +1126,10 @@ async function buildReport(){
   totals.pacing = totals.planToDate.impressions
     ? totals.delivered.impressions / totals.planToDate.impressions * 100 : null;
 
-  REPORT = {client, rows, totals, scope, toDateOnly,
+  // A daily series for the chart: projected against delivered, day by day.
+  const series = buildSeries(campaigns, live, toDateOnly);
+
+  REPORT = {client, rows, totals, scope, toDateOnly, series,
     from: rows.map(r => r.c.startDate).sort()[0],
     to: rows.map(r => r.c.endDate).sort().slice(-1)[0],
     generated: new Date()};
@@ -1119,6 +1137,163 @@ async function buildReport(){
   $('rpPrint').disabled = false; $('rpCsv').disabled = false;
 }
 $('rpBuild').addEventListener('click', buildReport);
+
+/**
+ * Day-by-day projected and delivered across every campaign in scope.
+ * Days with no delivery reported carry null rather than zero, so the chart
+ * shows a gap instead of drawing a line down to the axis.
+ */
+function buildSeries(campaigns, live, toDateOnly){
+  const today = new Date().toISOString().slice(0,10);
+  const byDate = new Map();
+  const touch = d => {
+    if (!byDate.has(d)) byDate.set(d, {date:d, plan:0, del:0, hasDel:false, est:false});
+    return byDate.get(d);
+  };
+
+  if (live){
+    const d0 = new Date(live.startDate + 'T00:00:00Z');
+    const at = i => new Date(d0.getTime() + i*86400000).toISOString().slice(0,10);
+    for (const c of campaigns){
+      const lc = (live.campaigns || []).find(x => String(x.id) === String(c.campaignId));
+      if (!lc) continue;
+      for (const p of (lc.plan || [])){
+        const date = at(p[0]);
+        if (toDateOnly && date > today) continue;
+        touch(date).plan += p[1];
+      }
+      for (const r of (lc.rows || [])){
+        const date = at(r[0]);
+        if (toDateOnly && date > today) continue;
+        const e = touch(date);
+        e.del += r[1]; e.hasDel = true;
+        if (r[5]) e.est = true;
+      }
+    }
+  } else {
+    // demo: derive the plan curve, and spread any recorded delivery over the
+    // days it was reported for
+    for (const c of campaigns){
+      const rows = planRows(c);
+      for (const p of rows){
+        if (toDateOnly && p.date > today) continue;
+        touch(p.date).plan += p.impressions;
+      }
+      if (c.delivered && c.delivered.days){
+        const span = rows.slice(0, c.delivered.days);
+        const per = c.delivered.impressions / (span.length || 1);
+        span.forEach((p, i) => {
+          if (toDateOnly && p.date > today) return;
+          const e = touch(p.date);
+          // a gentle wave, so the demo does not imply delivery is perfectly flat
+          e.del += per * (0.82 + 0.36 * ((i * 7) % 11) / 10);
+          e.hasDel = true;
+        });
+      }
+    }
+  }
+
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Compact axis labels: 1.2M, 340K. */
+function compactNum(v){
+  const a = Math.abs(v);
+  if (a >= 1e9) return (v/1e9).toFixed(a >= 1e10 ? 0 : 1) + 'B';
+  if (a >= 1e6) return (v/1e6).toFixed(a >= 1e7 ? 0 : 1) + 'M';
+  if (a >= 1e3) return (v/1e3).toFixed(a >= 1e4 ? 0 : 1) + 'K';
+  return String(Math.round(v));
+}
+
+/**
+ * The chart, as inline SVG so it prints. Projected is a dashed amber line,
+ * delivered a solid blue one — the same vocabulary as the dashboard.
+ */
+function reportChart(series){
+  if (series.length < 2) return '';
+  const W = 720, H = 240, P = {t:14, r:16, b:30, l:56};
+  const iw = W - P.l - P.r, ih = H - P.t - P.b;
+  const n = series.length;
+
+  const vals = series.flatMap(d => [d.plan, d.hasDel ? d.del : 0]).filter(v => isFinite(v));
+  let max = Math.max(...vals, 1);
+  const pow = Math.pow(10, Math.floor(Math.log10(max)));
+  max = Math.ceil(max / pow * 1.06) * pow;
+
+  const x = i => P.l + (n === 1 ? iw/2 : i/(n-1)*iw);
+  const y = v => P.t + ih - Math.min(v, max)/max*ih;
+
+  let g = '';
+  for (let t = 0; t <= 4; t++){
+    const yy = P.t + ih - t/4*ih;
+    g += `<line x1="${P.l}" y1="${yy}" x2="${P.l+iw}" y2="${yy}" stroke="${t ? '#EFF2F8' : '#D8DEE9'}" stroke-width="1"/>`;
+    g += `<text x="${P.l-9}" y="${yy+4}" text-anchor="end" fill="#98A1B5" font-family="Arial,sans-serif" font-size="10">${compactNum(t/4*max)}</text>`;
+  }
+  const step = Math.max(1, Math.ceil(n/8));
+  for (let i = 0; i < n; i += step){
+    const d = new Date(series[i].date + 'T00:00:00Z');
+    const lab = d.toLocaleDateString('en-GB', {day:'numeric', month:'short', timeZone:'UTC'});
+    g += `<text x="${x(i)}" y="${P.t+ih+18}" text-anchor="middle" fill="#98A1B5" font-family="Arial,sans-serif" font-size="10">${lab}</text>`;
+  }
+
+  const planPath = series.map((d,i) => `${i?'L':'M'}${x(i).toFixed(1)},${y(d.plan).toFixed(1)}`).join(' ');
+  g += `<path d="${planPath}" fill="none" stroke="#FF8A3D" stroke-width="1.8" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
+
+  // delivered is drawn only across days that actually have delivery
+  let seg = [], segs = [];
+  series.forEach((d,i) => {
+    if (d.hasDel) seg.push([x(i), y(d.del)]);
+    else if (seg.length){ segs.push(seg); seg = []; }
+  });
+  if (seg.length) segs.push(seg);
+  for (const sgm of segs){
+    if (sgm.length === 1){
+      g += `<circle cx="${sgm[0][0].toFixed(1)}" cy="${sgm[0][1].toFixed(1)}" r="3" fill="#2C5CF6"/>`;
+      continue;
+    }
+    const path = sgm.map((p,i) => `${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+    g += `<path d="${path}" fill="none" stroke="#2C5CF6" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  if (n <= 40){
+    series.forEach((d,i) => {
+      if (d.hasDel) g += `<circle cx="${x(i).toFixed(1)}" cy="${y(d.del).toFixed(1)}" r="2.4" fill="#fff" stroke="#2C5CF6" stroke-width="1.5"/>`;
+    });
+  }
+
+  const anyDel = series.some(d => d.hasDel);
+  const legend =
+    `<div class="rp-legend">` +
+    `<span><i class="ln proj"></i>Projected impressions</span>` +
+    (anyDel ? `<span><i class="ln del"></i>Delivered impressions</span>` : '') +
+    (series.some(d => d.est) ? `<span class="est-note">Dotted markers cover days spread from a range total</span>` : '') +
+    `</div>`;
+
+  return `<h3 class="rp-h3">Impressions over the flight</h3>
+    <div class="rp-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"
+      role="img" aria-label="Projected and delivered impressions by day">${g}</svg></div>${legend}`;
+}
+
+/**
+ * Say in words how delivery compares to plan. A gap in either direction is
+ * worth explaining rather than leaving a client to interpret two numbers.
+ */
+function varianceNote(T, anyDelivery){
+  if (!anyDelivery || T.pacing == null) return '';
+  const p = T.pacing;
+  const gap = Math.abs(100 - p).toFixed(1);
+  let verdict, cls;
+  if (p >= 97 && p <= 103){ verdict = `Delivery is on plan, within ${gap}% of the projection to date.`; cls = 'on'; }
+  else if (p > 103){
+    verdict = `Delivery is running <b>${gap}% ahead</b> of the projection to date — ` +
+      `${nfMoney.format(T.delivered.impressions - T.planToDate.impressions)} more impressions than planned so far.`;
+    cls = 'over';
+  } else {
+    verdict = `Delivery is running <b>${gap}% behind</b> the projection to date — ` +
+      `${nfMoney.format(T.planToDate.impressions - T.delivered.impressions)} fewer impressions than planned so far.`;
+    cls = 'under';
+  }
+  return `<div class="rp-variance ${cls}"><b>Pacing ${p.toFixed(1)}%.</b> ${verdict}</div>`;
+}
 
 function paceClass(v){ return v == null ? '' : v < 90 ? ' under' : v > 110 ? ' over' : ' on'; }
 const money2 = v => v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1202,6 +1377,8 @@ function paintReport(){
         ? 'Figures marked delivered are reported by ' + esc(R.client.partner || 'the media partner') + '. Pacing compares the two.'
         : 'No delivery has been imported for these campaigns yet, so this report is a plan only.'}</span></div>
     <div class="rp-grid">${stats.join('')}</div>
+    ${varianceNote(T, anyDelivery)}
+    ${reportChart(R.series)}
     <h3 class="rp-h3">By campaign</h3>
     <div class="table-scroll"><table>
       <thead><tr>${head.map((h,i) => `<th class="${i>=2 && i<=4 ? 'proj ' : ''}${i>=2 ? 'right' : ''}">${h}</th>`).join('')}</tr></thead>
