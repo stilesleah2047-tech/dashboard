@@ -129,7 +129,9 @@ async function start() {
     console.log('  Portal   http://localhost:' + PORT + '/portal.html');
     console.log('  Admin    http://localhost:' + PORT + '/admin.html');
     if (store.kind === 'mongodb') {
-      console.log('  Storage  MongoDB');
+      const safe = String(store.uri || '').replace(/\/\/([^:/@]+):([^@]+)@/, (m, u) => '//' + u + ':••••••@');
+      console.log('  Storage  MongoDB · ' + (process.env.MONGODB_DB || 'dmh_reporting'));
+      console.log('           ' + safe);
     } else if (store.kind === 'file') {
       console.log('  Storage  ' + store.path);
       console.log('           Fine for testing. Set MONGODB_URI in server/.env before real clients.');
