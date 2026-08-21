@@ -2,7 +2,8 @@
 
 const { hashPassword, verifyPassword, decoyHash, makeToken, readToken } = require('./auth');
 const { deriveTargets, buildPlan, planToDate, iso, toDate, dayCount,
-        splitExact, splitMoney, BILLING, normaliseBilling } = require('./plan');
+        dayFractionFromTime,
+        BILLING, normaliseBilling, simulateDelivery, simulateDeliveryUpto } = require('./plan');
 
 const upper = s => String(s || '').trim().toUpperCase();
 const lower = s => String(s || '').trim().toLowerCase();
@@ -98,11 +99,12 @@ async function data(store, req) {
       budget: num(client.budget),
     },
     campaigns: campaigns.map(c => {
-      const rows = (byCampaign.get(String(c.campaignId)) || [])
-        .sort((a, b) => a.date.localeCompare(b.date))
-        // sixth element flags a day whose figure came from splitting a window total
-        .map(a => [idx(a.date), num(a.impressions), num(a.clicks), num(a.spend),
-                   num(a.downloads), a.estimated ? 1 : 0]);
+      const allRows = (byCampaign.get(String(c.campaignId)) || [])
+        .sort((a, b) => a.date.localeCompare(b.date));
+      const rows = allRows
+        .map(a => [idx(a.date), num(a.impressions), num(a.clicks), num(a.spend), num(a.downloads)]);
+      const hasPartnerReport = allRows.some(a => a.source === 'partner-import');
+      const hasSimulated = allRows.some(a => a.source === 'simulated');
       const model = normaliseBilling(c.billing);
       return {
         id: isNaN(+c.campaignId) ? c.campaignId : +c.campaignId,
@@ -114,11 +116,12 @@ async function data(store, req) {
         start: iso(c.startDate),
         end: iso(c.endDate),
         rows,                                    // delivered, from the partner
-        estimatedDays: rows.filter(r => r[5]).length,
         plan: (c.plan || []).map(p => [idx(p.date), p.impressions, p.clicks, p.spend, p.downloads]),
         targets: c.targets || null,              // whole-flight targets
         planToDate: planToDate(c.plan || [], today),
         hasActuals: rows.length > 0,
+        hasPartnerReport,
+        hasSimulated,
       };
     }),
   };
@@ -249,6 +252,7 @@ async function listCampaigns(store, req) {
       objective: c.objective || '', shape: c.shape || 'even',
       targets: c.targets || null, planDays: (c.plan || []).length,
       actualDays: mine.length,
+      hasPartnerImport: mine.some(a => a.source === 'partner-import'),
     });
   }
   return { campaigns: out };
@@ -282,6 +286,23 @@ async function saveCampaign(store, req) {
     objective: String(req.objective || '').trim(), shape: plan.shape,
     targets: plan.targets, plan: plan.rows,
   });
+
+  // Auto-generate simulated delivery data up to now (inclusive of today,
+  // scaled by the current time-of-day fraction).
+  // Remove any previous simulated actuals first (e.g. flight dates changed),
+  // then generate fresh ones from the plan. The simulation now ticks up
+  // every 30 minutes — days from campaign start through today are generated,
+  // with today's row scaled by the dayFraction so figures feel "live".
+  // A periodic scheduler (simTick) updates the current day's row every
+  // 30 minutes. Real partner-import data on the same date will overwrite
+  // simulated rows.
+  const now = new Date();
+  const today = iso(now);
+  const frac = dayFractionFromTime(now);
+  await store.deleteActualsByCampaignAndSource(campaignId, 'simulated');
+  const simRows = simulateDeliveryUpto(plan, { clientCode, campaignId }, today, frac);
+  if (simRows.length) await store.upsertActuals(simRows);
+
   return Object.assign(res, { targets: plan.targets, days: plan.days });
 }
 
@@ -292,8 +313,68 @@ async function deleteCampaign(store, req) {
 }
 
 /**
+ * Sim tick — advance simulated delivery for all active campaigns.
+ *
+ * Called every 30 minutes by the periodic scheduler (server.js) and also
+ * available as an API action for manual trigger. For each campaign that is
+ * currently in-flight (startDate ≤ today ≤ endDate), this regenerates
+ * simulated actuals up to the current moment, using the current time-of-day
+ * as a fraction to produce intra-day granularity.
+ *
+ * The key insight: simulateDeliveryUpto(plan, meta, today, dayFraction)
+ * always produces the same values for any FULL day because the PRNG is
+ * deterministic. For the current day, the dayFraction parameter scales
+ * the last day's row — so a 14:00 UTC tick shows ~58% of the day's
+ * simulated values. Re-generating simply upserts the same rows (compound
+ * key = campaignId+date), so past days are unchanged and only the current
+ * day's row is updated with the incremental fraction.
+ */
+async function simTick(store, req) {
+  // Optional admin guard — if a token is present, verify it.
+  if (req && req.token) await requireAdmin(store, req);
+
+  const now = new Date();
+  const today = iso(now);
+  const frac = dayFractionFromTime(now);
+  const campaigns = await store.listCampaigns();
+  let advanced = 0;
+
+  for (const c of campaigns) {
+    // Only process campaigns currently in flight.
+    if (c.startDate > today || c.endDate < today) continue;
+
+    // Skip campaigns that already have partner-reported data for today —
+    // real data always takes precedence.
+    const actuals = await store.listActuals(c.clientCode);
+    const mine = actuals.filter(a => String(a.campaignId) === String(c.campaignId));
+    const todayPartner = mine.some(a => a.date === today && a.source === 'partner-import');
+    if (todayPartner) continue;
+
+    // Rebuild the plan from campaign parameters.
+    const convRate = c.convRate != null ? c.convRate : (c.installRate || 0);
+    const plan = buildPlan({
+      budget: num(c.budget), billing: normaliseBilling(c.billing),
+      rate: num(c.rate), ctr: num(c.ctr), convRate: num(convRate),
+      startDate: c.startDate, endDate: c.endDate, shape: c.shape,
+    });
+
+    // Generate simulated data up to now. The dayFraction parameter scales
+    // today's row so simulated figures tick up intra-day. Past days' rows
+    // are unchanged because the PRNG is deterministic and dayFraction=1
+    // for them. Upsert with the compound key means no duplication.
+    const simRows = simulateDeliveryUpto(plan, { clientCode: c.clientCode, campaignId: c.campaignId }, today, frac);
+    if (simRows.length) {
+      await store.upsertActuals(simRows);
+      advanced++;
+    }
+  }
+
+  return { tick: today, dayFraction: Math.round(frac * 10000) / 10000, campaignsAdvanced: advanced };
+}
+
+/**
  * Import delivery reported by the media partner. This is the only path by
- * which an actuals row is ever created.
+ * which partner-reported actuals rows are created.
  */
 async function importActuals(store, req) {
   await requireAdmin(store, req);
@@ -315,93 +396,12 @@ async function importActuals(store, req) {
       clicks: Math.max(0, Math.round(num(r.clicks))),
       spend: Math.max(0, Math.round(num(r.spend) * 10000) / 10000),
       downloads: Math.max(0, Math.round(num(r.downloads))),
-      estimated: false,
       source: String(r.source || 'partner-import'),
       importedAt: new Date().toISOString(),
     });
   }
   const written = await store.upsertActuals(clean);
   return { written, skipped: skipped.length, skippedIds: skipped.slice(0, 10) };
-}
-
-/**
- * Import a window total rather than a daily breakdown.
- *
- * Some partner exports only give totals for a date range. The total is real
- * measured delivery; the split across days inside the window is not, so every
- * row it writes is flagged `estimated`. The dashboard renders those days
- * differently and says so — the totals are exact, the daily shape is an even
- * allocation.
- *
- * Anything already imported as a daily figure for those dates is left alone:
- * a measured day is always better than a share of a total.
- */
-async function importWindow(store, req) {
-  await requireAdmin(store, req);
-
-  const campaign = await store.findCampaign(String(req.campaignId || '').trim());
-  if (!campaign) throw new Error('No campaign with ID ' + req.campaignId + '.');
-
-  const start = toDate(req.startDate), end = toDate(req.endDate);
-  if (end < start) throw new Error('The end date falls before the start date.');
-  const days = dayCount(start, end);
-  if (days > 400) throw new Error('That window is longer than 400 days — check the dates.');
-
-  const totals = {
-    impressions: Math.max(0, Math.round(num(req.impressions))),
-    clicks: Math.max(0, Math.round(num(req.clicks))),
-    spend: Math.max(0, num(req.spend)),
-    downloads: Math.max(0, Math.round(num(req.downloads))),
-  };
-  if (!totals.impressions && !totals.clicks && !totals.spend && !totals.downloads) {
-    throw new Error('Enter at least one figure to spread across the window.');
-  }
-
-  // Which days already have measured figures? Those are never overwritten.
-  const existing = await store.listActuals(campaign.clientCode);
-  const measured = new Set(existing
-    .filter(a => String(a.campaignId) === String(campaign.campaignId) && !a.estimated)
-    .map(a => a.date));
-
-  const dates = [];
-  for (let i = 0; i < days; i++) dates.push(iso(new Date(start.getTime() + i * 86400000)));
-  const open = dates.filter(d => !measured.has(d));
-  if (!open.length) {
-    return { written: 0, skipped: dates.length, days,
-      note: 'Every day in that window already has measured delivery, so nothing was changed.' };
-  }
-
-  // Even split. Anything cleverer would be inventing a shape we have no
-  // evidence for, and the totals are what the client is actually owed.
-  const weights = open.map(() => 1);
-  const impressions = splitExact(totals.impressions, weights);
-  const clicks = splitExact(totals.clicks, weights);
-  const downloads = splitExact(totals.downloads, weights);
-  const spend = splitMoney(totals.spend, weights);
-
-  const rows = open.map((date, i) => ({
-    clientCode: upper(campaign.clientCode),
-    campaignId: String(campaign.campaignId),
-    date,
-    impressions: impressions[i],
-    clicks: clicks[i],
-    spend: spend[i],
-    downloads: downloads[i],
-    estimated: true,
-    windowStart: iso(start),
-    windowEnd: iso(end),
-    source: 'window-total',
-    importedAt: new Date().toISOString(),
-  }));
-
-  const written = await store.upsertActuals(rows);
-  return {
-    written, days, spreadAcross: open.length,
-    skipped: dates.length - open.length,
-    note: dates.length - open.length
-      ? (dates.length - open.length) + ' day(s) already had measured figures and were left as they are.'
-      : '',
-  };
 }
 
 /* ── router ───────────────────────────────────────────────────────────── */
@@ -419,7 +419,8 @@ const ROUTES = {
   'admin.deleteCampaign': deleteCampaign,
   'admin.previewPlan': previewPlan,
   'admin.importActuals': importActuals,
-  'admin.importWindow': importWindow,
+  'admin.simTick': simTick,
+  'simTick': simTick,
   'ping': async () => ({ service: 'DMH reporting', time: new Date().toISOString() }),
 };
 
