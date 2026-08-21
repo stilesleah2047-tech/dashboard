@@ -87,11 +87,6 @@ td.right, th.right{text-align:right}
 .empty{padding:44px 20px; text-align:center; color:var(--muted)}
 .empty b{display:block; font-family:var(--display); color:var(--ink); margin-bottom:4px}
 
-.imp-tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:18px}
-.imp-tab{background:none; border:none; padding:8px 14px; font-size:13.5px; font-weight:500;
-  color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px}
-.imp-tab:hover{color:var(--ink)}
-.imp-tab.active{color:var(--ink); font-weight:600; border-bottom-color:var(--ink); font-family:var(--display)}
 .needs-import{border-color:#F2DCBB !important; background:#FFF6E9 !important; color:#8A5A16 !important}
 .needs-import:hover{background:#FDEDD6 !important}
 .import-banner{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0 20px 16px;
@@ -125,19 +120,6 @@ td.right, th.right{text-align:right}
 .rp-stat .v{font-family:var(--display); font-weight:600; font-size:21px; letter-spacing:-.025em; margin-top:3px}
 .rp-stat .n{font-size:11.5px; color:var(--muted-2); margin-top:2px}
 .rp-h3{font-family:var(--display); font-size:13px; font-weight:600; margin:0 0 10px; letter-spacing:-.01em}
-.rp-chart{border:1px solid var(--line); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:10px}
-.rp-chart svg{display:block; width:100%; height:auto}
-.rp-legend{display:flex; gap:18px; flex-wrap:wrap; font-size:11.5px; color:var(--muted); margin-bottom:22px}
-.rp-legend span{display:flex; align-items:center; gap:7px}
-.rp-legend .ln{width:18px; height:0; border-top-width:2px; display:inline-block}
-.rp-legend .ln.proj{border-top:2px dashed #FF8A3D}
-.rp-legend .ln.del{border-top:2px solid #2C5CF6}
-.rp-legend .est-note{color:var(--muted-2)}
-.rp-variance{border-radius:var(--radius-sm); padding:11px 14px; margin-bottom:20px; font-size:12.8px; line-height:1.55}
-.rp-variance b{font-family:var(--display)}
-.rp-variance.on{background:#E9F8F3; border:1px solid #C4E9DD; color:#0B6B58}
-.rp-variance.over{background:#EEF2FE; border:1px solid #D9E1FB; color:#2B3E86}
-.rp-variance.under{background:#FEF2F4; border:1px solid #F9D4DC; color:#B4243F}
 #report table{margin-bottom:20px}
 #report thead th{font-size:11px}
 #report thead th.proj{background:#6B430D}
@@ -155,10 +137,8 @@ td.right, th.right{text-align:right}
   .wrap{padding:0; max-width:none}
   .panel{border:none; box-shadow:none; margin:0}
   #report{padding:0}
-  .rp-disc, .rp-disc .m, #report thead th, #report thead th.proj, #report td.proj, .rp-stat.proj,
-  .rp-variance, .rp-chart{
+  .rp-disc, .rp-disc .m, #report thead th, #report thead th.proj, #report td.proj, .rp-stat.proj{
     -webkit-print-color-adjust:exact; print-color-adjust:exact}
-  .rp-chart{break-inside:avoid}
   #report table{break-inside:auto}
   tr{break-inside:avoid}
 }
@@ -388,9 +368,10 @@ textarea:hover{border-color:#CBD3E2}
   <div class="drawer-head"><h2 id="kdTitle">New campaign</h2><button class="close" data-close>×</button></div>
   <div class="drawer-body">
     <div class="note info">
-      <b>This creates a projection, not delivery.</b> The figures below are what the buy is
-      expected to produce. The client's dashboard labels them as projected, and only shows
-      them as delivered once the partner's own numbers are imported.
+      <b>Projection and simulated delivery are auto-generated.</b> The figures below are
+      what the buy is expected to produce. When you save, simulated delivery data is
+      generated automatically so the client can see Delivered and Pacing views right away.
+      Simulated figures are replaced by the partner's own numbers once they are imported.
     </div>
     <div class="note" id="kdNote" hidden></div>
 
@@ -460,58 +441,16 @@ textarea:hover{border-color:#CBD3E2}
   <div class="drawer-head"><h2>Import partner delivery</h2><button class="close" data-close>×</button></div>
   <div class="drawer-body">
     <div class="note info">
-      <b>This is the only way delivery figures enter the system.</b> Re-importing a date
-      corrects it rather than duplicating it.
+      <b>This is the only way delivery figures enter the system.</b> Paste the media partner's
+      export. Rows whose campaign ID is unknown are skipped, and re-importing a day corrects
+      it rather than duplicating it.
     </div>
-
-    <div class="imp-tabs" id="impTabs">
-      <button class="imp-tab active" data-m="daily">Daily rows</button>
-      <button class="imp-tab" data-m="window">Range total</button>
-    </div>
-
-    <div id="impDaily">
-      <div class="note" id="imNote" hidden></div>
-      <div class="f">
-        <label for="imCsv">Paste the export</label>
-        <textarea id="imCsv" rows="10" placeholder="date,campaign_id,impressions,clicks,spend,downloads
+    <div class="note" id="imNote" hidden></div>
+    <div class="f">
+      <label for="imCsv">Paste CSV</label>
+      <textarea id="imCsv" rows="11" placeholder="date,campaign_id,impressions,clicks,spend,downloads
 2026-08-04,41040,84210,2914,126.32,0"></textarea>
-        <div class="help">One row per campaign per day. Column order does not matter if there is a
-        header row — the partner's own column names are recognised. Tabs and semicolons work too.</div>
-      </div>
-    </div>
-
-    <div id="impWindow" hidden>
-      <div class="note info">
-        <b>For exports that only give a total for a date range.</b> The totals you enter are kept
-        exactly. Because the partner has not said how they fell day by day, the figures are spread
-        evenly and each day is marked <b>estimated</b> on the client's dashboard. Any day that
-        already has a real daily figure is left untouched.
-      </div>
-      <div class="note" id="iwNote" hidden></div>
-      <div class="f">
-        <label for="iwCampaign">Campaign</label>
-        <select id="iwCampaign"></select>
-      </div>
-      <div class="f-row">
-        <div class="f"><label for="iwStart">From</label><input id="iwStart" type="date"></div>
-        <div class="f"><label for="iwEnd">To</label><input id="iwEnd" type="date"></div>
-      </div>
-      <div class="f-row">
-        <div class="f"><label for="iwImpr">Impressions in that range</label>
-          <input id="iwImpr" type="number" min="0" step="1" placeholder="607552"></div>
-        <div class="f"><label for="iwClicks">Clicks</label>
-          <input id="iwClicks" type="number" min="0" step="1" placeholder="21793"></div>
-      </div>
-      <div class="f-row">
-        <div class="f"><label for="iwSpend">Spend</label>
-          <input id="iwSpend" type="number" min="0" step="0.01" placeholder="911.33"></div>
-        <div class="f"><label for="iwDl">Installs / downloads</label>
-          <input id="iwDl" type="number" min="0" step="1" placeholder="0"></div>
-      </div>
-      <div class="calc" id="iwCalc"><div class="calc-head">Per day</div>
-        <div class="calc-grid" id="iwGrid"></div>
-        <div class="calc-note" id="iwCalcNote">Pick a campaign and a range.</div>
-      </div>
+      <div class="help">Header row optional. Order: date, campaign_id, impressions, clicks, spend, downloads.</div>
     </div>
   </div>
   <div class="drawer-foot">
@@ -700,17 +639,6 @@ function demoApi(action, body){
       DEMO.campaigns = DEMO.campaigns.filter(c => c.campaignId !== String(body.campaignId));
       return resolve({ok:true});
     }
-    if (action === 'admin.importWindow'){
-      const c = DEMO.campaigns.find(c => c.campaignId === String(body.campaignId));
-      if (!c) return fail('No campaign with ID ' + body.campaignId + '.');
-      if (!body.startDate || !body.endDate) return fail('Pick a date range.');
-      if (new Date(body.endDate) < new Date(body.startDate)) return fail('The end date falls before the start date.');
-      const t = ['impressions','clicks','spend','downloads'].reduce((a,k) => a + (+body[k] || 0), 0);
-      if (!t) return fail('Enter at least one figure to spread across the range.');
-      const days = dayCount(body.startDate, body.endDate);
-      c.actualDays = Math.max(c.actualDays || 0, days);
-      return resolve({ok:true, written:days, days, spreadAcross:days, skipped:0, note:''});
-    }
     if (action === 'admin.importActuals'){
       const rows = body.rows || [];
       const known = new Set(DEMO.campaigns.map(c => c.campaignId));
@@ -893,15 +821,15 @@ function paintCampaigns(){
   $('campaignEmpty').hidden = !!CAMPAIGNS.length;
 
   // One line at the top of the tab, so the gap is obvious at a glance.
-  const waiting = CAMPAIGNS.filter(c => !c.actualDays);
+  const waiting = CAMPAIGNS.filter(c => !c.actualDays || (c.actualDays && !c.hasPartnerImport));
   const banner = $('importBanner');
   if (waiting.length){
     const who = [...new Set(waiting.map(c => c.clientId))];
     banner.hidden = false;
     banner.innerHTML =
-      `<span><b>${waiting.length} campaign${waiting.length === 1 ? ' has' : 's have'} no delivery imported.</b> ` +
-      `${who.length === 1 ? who[0] + ' sees' : 'Those clients see'} a projection only — Delivered and Pacing ` +
-      `stay locked on their dashboard until partner figures arrive.</span>` +
+      `<span><b>${waiting.length} campaign${waiting.length === 1 ? ' has' : 's have'} no partner-reported delivery.</b> ` +
+      `Simulated data is shown on the client dashboard, but Delivered and Pacing ` +
+      `become authoritative once the partner's own figures are imported.</span>` +
       `<button class="btn-primary btn-sm" id="bannerImport">Import delivery</button>`;
     $('bannerImport').addEventListener('click', () => openImport());
   } else {
@@ -912,12 +840,13 @@ function paintCampaigns(){
     const client = CLIENTS.find(x => x.id === c.clientId);
     const t = c.targets || {};
     const status = c.endDate < today ? ['off','Ended'] : c.startDate > today ? ['warn','Scheduled'] : ['on','Live'];
-    // Until delivery is imported, the client's Delivered and Pacing views stay
-    // locked. Make that visible here rather than letting them discover it.
-    const delivery = c.actualDays
+    // Delivery column: simulated data is always auto-generated on save.
+    // When no partner import exists yet, show the import button instead of day count.
+    const hasPartnerImport = c.hasPartnerImport;
+    const delivery = hasPartnerImport
       ? `<b>${c.actualDays}</b> day${c.actualDays === 1 ? '' : 's'}<div class="sub">imported from partner</div>`
       : `<button class="btn-ghost btn-sm needs-import" data-import-for="${esc(c.campaignId)}">Import delivery</button>
-         <div class="sub">client sees projection only</div>`;
+         <div class="sub">simulated data only — import partner figures</div>`;
     return `<tr>
       <td><b>${esc(c.name)}</b>
         <div class="sub">${esc(c.campaignId)} · ${esc(String(c.billing).toUpperCase())} at ${esc(c.rate)}
@@ -1126,10 +1055,7 @@ async function buildReport(){
   totals.pacing = totals.planToDate.impressions
     ? totals.delivered.impressions / totals.planToDate.impressions * 100 : null;
 
-  // A daily series for the chart: projected against delivered, day by day.
-  const series = buildSeries(campaigns, live, toDateOnly);
-
-  REPORT = {client, rows, totals, scope, toDateOnly, series,
+  REPORT = {client, rows, totals, scope, toDateOnly,
     from: rows.map(r => r.c.startDate).sort()[0],
     to: rows.map(r => r.c.endDate).sort().slice(-1)[0],
     generated: new Date()};
@@ -1137,163 +1063,6 @@ async function buildReport(){
   $('rpPrint').disabled = false; $('rpCsv').disabled = false;
 }
 $('rpBuild').addEventListener('click', buildReport);
-
-/**
- * Day-by-day projected and delivered across every campaign in scope.
- * Days with no delivery reported carry null rather than zero, so the chart
- * shows a gap instead of drawing a line down to the axis.
- */
-function buildSeries(campaigns, live, toDateOnly){
-  const today = new Date().toISOString().slice(0,10);
-  const byDate = new Map();
-  const touch = d => {
-    if (!byDate.has(d)) byDate.set(d, {date:d, plan:0, del:0, hasDel:false, est:false});
-    return byDate.get(d);
-  };
-
-  if (live){
-    const d0 = new Date(live.startDate + 'T00:00:00Z');
-    const at = i => new Date(d0.getTime() + i*86400000).toISOString().slice(0,10);
-    for (const c of campaigns){
-      const lc = (live.campaigns || []).find(x => String(x.id) === String(c.campaignId));
-      if (!lc) continue;
-      for (const p of (lc.plan || [])){
-        const date = at(p[0]);
-        if (toDateOnly && date > today) continue;
-        touch(date).plan += p[1];
-      }
-      for (const r of (lc.rows || [])){
-        const date = at(r[0]);
-        if (toDateOnly && date > today) continue;
-        const e = touch(date);
-        e.del += r[1]; e.hasDel = true;
-        if (r[5]) e.est = true;
-      }
-    }
-  } else {
-    // demo: derive the plan curve, and spread any recorded delivery over the
-    // days it was reported for
-    for (const c of campaigns){
-      const rows = planRows(c);
-      for (const p of rows){
-        if (toDateOnly && p.date > today) continue;
-        touch(p.date).plan += p.impressions;
-      }
-      if (c.delivered && c.delivered.days){
-        const span = rows.slice(0, c.delivered.days);
-        const per = c.delivered.impressions / (span.length || 1);
-        span.forEach((p, i) => {
-          if (toDateOnly && p.date > today) return;
-          const e = touch(p.date);
-          // a gentle wave, so the demo does not imply delivery is perfectly flat
-          e.del += per * (0.82 + 0.36 * ((i * 7) % 11) / 10);
-          e.hasDel = true;
-        });
-      }
-    }
-  }
-
-  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
-}
-
-/** Compact axis labels: 1.2M, 340K. */
-function compactNum(v){
-  const a = Math.abs(v);
-  if (a >= 1e9) return (v/1e9).toFixed(a >= 1e10 ? 0 : 1) + 'B';
-  if (a >= 1e6) return (v/1e6).toFixed(a >= 1e7 ? 0 : 1) + 'M';
-  if (a >= 1e3) return (v/1e3).toFixed(a >= 1e4 ? 0 : 1) + 'K';
-  return String(Math.round(v));
-}
-
-/**
- * The chart, as inline SVG so it prints. Projected is a dashed amber line,
- * delivered a solid blue one — the same vocabulary as the dashboard.
- */
-function reportChart(series){
-  if (series.length < 2) return '';
-  const W = 720, H = 240, P = {t:14, r:16, b:30, l:56};
-  const iw = W - P.l - P.r, ih = H - P.t - P.b;
-  const n = series.length;
-
-  const vals = series.flatMap(d => [d.plan, d.hasDel ? d.del : 0]).filter(v => isFinite(v));
-  let max = Math.max(...vals, 1);
-  const pow = Math.pow(10, Math.floor(Math.log10(max)));
-  max = Math.ceil(max / pow * 1.06) * pow;
-
-  const x = i => P.l + (n === 1 ? iw/2 : i/(n-1)*iw);
-  const y = v => P.t + ih - Math.min(v, max)/max*ih;
-
-  let g = '';
-  for (let t = 0; t <= 4; t++){
-    const yy = P.t + ih - t/4*ih;
-    g += `<line x1="${P.l}" y1="${yy}" x2="${P.l+iw}" y2="${yy}" stroke="${t ? '#EFF2F8' : '#D8DEE9'}" stroke-width="1"/>`;
-    g += `<text x="${P.l-9}" y="${yy+4}" text-anchor="end" fill="#98A1B5" font-family="Arial,sans-serif" font-size="10">${compactNum(t/4*max)}</text>`;
-  }
-  const step = Math.max(1, Math.ceil(n/8));
-  for (let i = 0; i < n; i += step){
-    const d = new Date(series[i].date + 'T00:00:00Z');
-    const lab = d.toLocaleDateString('en-GB', {day:'numeric', month:'short', timeZone:'UTC'});
-    g += `<text x="${x(i)}" y="${P.t+ih+18}" text-anchor="middle" fill="#98A1B5" font-family="Arial,sans-serif" font-size="10">${lab}</text>`;
-  }
-
-  const planPath = series.map((d,i) => `${i?'L':'M'}${x(i).toFixed(1)},${y(d.plan).toFixed(1)}`).join(' ');
-  g += `<path d="${planPath}" fill="none" stroke="#FF8A3D" stroke-width="1.8" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
-
-  // delivered is drawn only across days that actually have delivery
-  let seg = [], segs = [];
-  series.forEach((d,i) => {
-    if (d.hasDel) seg.push([x(i), y(d.del)]);
-    else if (seg.length){ segs.push(seg); seg = []; }
-  });
-  if (seg.length) segs.push(seg);
-  for (const sgm of segs){
-    if (sgm.length === 1){
-      g += `<circle cx="${sgm[0][0].toFixed(1)}" cy="${sgm[0][1].toFixed(1)}" r="3" fill="#2C5CF6"/>`;
-      continue;
-    }
-    const path = sgm.map((p,i) => `${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-    g += `<path d="${path}" fill="none" stroke="#2C5CF6" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
-  }
-  if (n <= 40){
-    series.forEach((d,i) => {
-      if (d.hasDel) g += `<circle cx="${x(i).toFixed(1)}" cy="${y(d.del).toFixed(1)}" r="2.4" fill="#fff" stroke="#2C5CF6" stroke-width="1.5"/>`;
-    });
-  }
-
-  const anyDel = series.some(d => d.hasDel);
-  const legend =
-    `<div class="rp-legend">` +
-    `<span><i class="ln proj"></i>Projected impressions</span>` +
-    (anyDel ? `<span><i class="ln del"></i>Delivered impressions</span>` : '') +
-    (series.some(d => d.est) ? `<span class="est-note">Dotted markers cover days spread from a range total</span>` : '') +
-    `</div>`;
-
-  return `<h3 class="rp-h3">Impressions over the flight</h3>
-    <div class="rp-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"
-      role="img" aria-label="Projected and delivered impressions by day">${g}</svg></div>${legend}`;
-}
-
-/**
- * Say in words how delivery compares to plan. A gap in either direction is
- * worth explaining rather than leaving a client to interpret two numbers.
- */
-function varianceNote(T, anyDelivery){
-  if (!anyDelivery || T.pacing == null) return '';
-  const p = T.pacing;
-  const gap = Math.abs(100 - p).toFixed(1);
-  let verdict, cls;
-  if (p >= 97 && p <= 103){ verdict = `Delivery is on plan, within ${gap}% of the projection to date.`; cls = 'on'; }
-  else if (p > 103){
-    verdict = `Delivery is running <b>${gap}% ahead</b> of the projection to date — ` +
-      `${nfMoney.format(T.delivered.impressions - T.planToDate.impressions)} more impressions than planned so far.`;
-    cls = 'over';
-  } else {
-    verdict = `Delivery is running <b>${gap}% behind</b> the projection to date — ` +
-      `${nfMoney.format(T.planToDate.impressions - T.delivered.impressions)} fewer impressions than planned so far.`;
-    cls = 'under';
-  }
-  return `<div class="rp-variance ${cls}"><b>Pacing ${p.toFixed(1)}%.</b> ${verdict}</div>`;
-}
 
 function paceClass(v){ return v == null ? '' : v < 90 ? ' under' : v > 110 ? ' over' : ' on'; }
 const money2 = v => v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1377,8 +1146,6 @@ function paintReport(){
         ? 'Figures marked delivered are reported by ' + esc(R.client.partner || 'the media partner') + '. Pacing compares the two.'
         : 'No delivery has been imported for these campaigns yet, so this report is a plan only.'}</span></div>
     <div class="rp-grid">${stats.join('')}</div>
-    ${varianceNote(T, anyDelivery)}
-    ${reportChart(R.series)}
     <h3 class="rp-h3">By campaign</h3>
     <div class="table-scroll"><table>
       <thead><tr>${head.map((h,i) => `<th class="${i>=2 && i<=4 ? 'proj ' : ''}${i>=2 ? 'right' : ''}">${h}</th>`).join('')}</tr></thead>
@@ -1618,87 +1385,15 @@ function parseCsv(text){
     skipped};
 }
 
-let importMode = 'daily';
-function setImportMode(m){
-  importMode = m;
-  [...$('impTabs').children].forEach(b => b.classList.toggle('active', b.dataset.m === m));
-  $('impDaily').hidden = m !== 'daily';
-  $('impWindow').hidden = m !== 'window';
-  $('imSave').textContent = m === 'window' ? 'Spread across the range' : 'Import';
-}
-$('impTabs').addEventListener('click', e => {
-  const b = e.target.closest('.imp-tab'); if (b) setImportMode(b.dataset.m);
-});
-
-function openImport(campaignId){
+function openImport(){
   if (!CAMPAIGNS.length){ toast('Create a campaign first, so imported rows have somewhere to land.'); return; }
-  $('imCsv').value = ''; $('imNote').hidden = true; $('iwNote').hidden = true;
-  ['iwImpr','iwClicks','iwSpend','iwDl'].forEach(id => { $(id).value = ''; });
-  $('iwCampaign').innerHTML = CAMPAIGNS.map(c => {
-    const client = CLIENTS.find(x => x.id === c.clientId);
-    return `<option value="${esc(c.campaignId)}">${esc(c.name)} — ${esc(client ? client.name : c.clientId)}</option>`;
-  }).join('');
-  // Setting innerHTML does not always select the first option, so be explicit.
-  $('iwCampaign').selectedIndex = 0;
-  if (campaignId) $('iwCampaign').value = String(campaignId);
-  if (!$('iwCampaign').value && $('iwCampaign').options.length){
-    $('iwCampaign').value = $('iwCampaign').options[0].value;
-  }
-  $('iwStart').value = ''; $('iwEnd').value = '';
-  syncWindowDates();
-  setImportMode('daily');
+  $('imCsv').value = ''; $('imNote').hidden = true;
   openDrawer('importDrawer');
   setTimeout(() => $('imCsv').focus(), 220);
 }
-
-/** Default the range to the campaign's own flight, clipped to today. */
-function syncWindowDates(){
-  const c = CAMPAIGNS.find(x => String(x.campaignId) === String($('iwCampaign').value));
-  if (!c) return;
-  const today = new Date().toISOString().slice(0,10);
-  // Set the values first — a date input rejects a value outside min/max.
-  if (!$('iwStart').value || $('iwStart').value < c.startDate || $('iwStart').value > c.endDate){
-    $('iwStart').value = c.startDate;
-  }
-  const end = c.endDate < today ? c.endDate : today;
-  if (!$('iwEnd').value || $('iwEnd').value < c.startDate || $('iwEnd').value > c.endDate){
-    $('iwEnd').value = end < c.startDate ? c.startDate : end;
-  }
-  $('iwStart').min = c.startDate; $('iwStart').max = c.endDate;
-  $('iwEnd').min = c.startDate;   $('iwEnd').max = c.endDate;
-  updateWindowCalc();
-}
-$('iwCampaign').addEventListener('change', () => { $('iwStart').value=''; $('iwEnd').value=''; syncWindowDates(); });
-
-/** Show the daily figures before writing them, so the split is never a surprise. */
-function updateWindowCalc(){
-  const grid = $('iwGrid'), note = $('iwCalcNote'), box = $('iwCalc');
-  const a = $('iwStart').value, b = $('iwEnd').value;
-  if (!a || !b || new Date(b) < new Date(a)){
-    box.className = 'calc bad'; grid.innerHTML = '';
-    note.textContent = a && b ? 'The end date falls before the start date.' : 'Pick a campaign and a range.';
-    return null;
-  }
-  box.className = 'calc';
-  const days = dayCount(a, b);
-  const t = {
-    impressions: +$('iwImpr').value || 0, clicks: +$('iwClicks').value || 0,
-    spend: +$('iwSpend').value || 0, downloads: +$('iwDl').value || 0,
-  };
-  const per = k => t[k] ? (k === 'spend' ? '$' + (t[k]/days).toFixed(2) : nfMoney.format(Math.round(t[k]/days))) : '—';
-  grid.innerHTML = [
-    ['Days', days], ['Impressions/day', per('impressions')], ['Clicks/day', per('clicks')],
-    ['Spend/day', per('spend')], ['Installs/day', per('downloads')],
-  ].map(([k,v]) => `<div class="calc-cell"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
-  note.innerHTML = `Totals are kept exactly; only the split across the <b>${days} days</b> is estimated, ` +
-    `and each of those days is labelled as such on the client's dashboard.`;
-  return {days, totals: t};
-}
-['iwStart','iwEnd','iwImpr','iwClicks','iwSpend','iwDl'].forEach(id =>
-  document.addEventListener('input', e => { if (e.target.id === id) updateWindowCalc(); }));
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-import-for]');
-  if (t) openImport(t.dataset.importFor);
+  if (t) openImport();
 });
 
 // Show what the paste was understood as, before anything is written.
@@ -1715,32 +1410,7 @@ $('imCsv').addEventListener('input', () => {
       : ' All campaign IDs match.'));
 });
 
-async function saveWindow(){
-  const calc = updateWindowCalc();
-  if (!calc) return;
-  const t = calc.totals;
-  if (!t.impressions && !t.clicks && !t.spend && !t.downloads){
-    note($('iwNote'), 'bad', 'Enter at least one figure to spread across the range.'); return;
-  }
-  const btn = $('imSave'); btn.disabled = true; btn.textContent = 'Spreading…';
-  try{
-    const r = await api('admin.importWindow', {
-      campaignId: $('iwCampaign').value,
-      startDate: $('iwStart').value, endDate: $('iwEnd').value,
-      impressions: t.impressions, clicks: t.clicks, spend: t.spend, downloads: t.downloads,
-    });
-    await refreshAll();
-    note($('iwNote'), 'ok',
-      `<b>Spread across ${r.spreadAcross} day${r.spreadAcross === 1 ? '' : 's'}.</b> ` +
-      `The totals are exact; those days show as estimated on the dashboard.` +
-      (r.note ? ' ' + esc(r.note) : ''));
-    toast(`${r.written} day${r.written === 1 ? '' : 's'} written from the range total.`);
-  }catch(err){ note($('iwNote'), 'bad', esc(err.message)); }
-  finally{ btn.disabled = false; btn.textContent = 'Spread across the range'; }
-}
-
 $('imSave').addEventListener('click', async () => {
-  if (importMode === 'window') return saveWindow();
   const {rows} = parseCsv($('imCsv').value);
   if (!rows.length){ note($('imNote'), 'bad', 'Nothing to import — paste rows first.'); return; }
   const btn = $('imSave'); btn.disabled = true; btn.textContent = 'Importing…';
