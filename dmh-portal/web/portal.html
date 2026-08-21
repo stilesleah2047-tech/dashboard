@@ -61,6 +61,36 @@ button{cursor:pointer}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .who{font-size:12px; color:#8E97AE}
 
+/* ---------- projection disclaimer ---------- */
+.proj-bar{display:flex; align-items:flex-start; gap:13px; padding:13px 18px; margin-bottom:18px;
+  border-radius:var(--radius); background:#FFF6E9; border:1px solid #F2DCBB; color:#7A4E11}
+.proj-bar .pb-mark{font-family:var(--display); font-size:10px; font-weight:700; letter-spacing:.13em;
+  text-transform:uppercase; background:var(--amber); color:#0C1222; padding:4px 9px; border-radius:5px;
+  flex:none; margin-top:1px}
+.proj-bar .pb-text{font-size:12.8px; line-height:1.55}
+.proj-bar .pb-text b{font-family:var(--display); font-weight:600}
+.views{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; height:30px}
+.views button{background:#fff; border:none; border-right:1px solid var(--line); padding:0 13px;
+  font-size:12px; color:var(--muted); font-weight:500; display:flex; align-items:center; gap:6px}
+.views button:last-child{border-right:none}
+.views button.locked{opacity:.5; cursor:help}
+.views button.locked:hover{background:#FFF6E9}
+.views button.active{background:var(--ink); color:#fff; font-weight:600}
+.views .sw{width:7px; height:7px; border-radius:2px; flex:none}
+.views .sw.p{background:var(--amber)}
+.views .sw.d{background:var(--blue)}
+.views .sw.b{background:linear-gradient(90deg,var(--amber) 50%,var(--blue) 50%)}
+.view-why{font-size:11.5px; color:#9A5B12; background:#FFF6E9; border:1px solid #F2DCBB;
+  border-radius:7px; padding:5px 10px; opacity:0; transition:opacity .15s; pointer-events:none}
+.view-why.show{opacity:1}
+.col-proj{color:#9A5B12}
+th.col-proj{background:#3A2B12}
+td.col-proj{background:#FFFBF4}
+.pace-cell{font-weight:600; font-family:var(--display)}
+.pace-cell.under{color:#B4243F}
+.pace-cell.over{color:#0B7A65}
+.pace-cell.on{color:var(--ink)}
+
 /* ---------- campaign status ---------- */
 .badge{display:inline-block; margin-left:8px; padding:1px 7px; border-radius:99px; font-size:10.5px;
   font-weight:600; letter-spacing:.03em; vertical-align:1px}
@@ -71,6 +101,12 @@ button{cursor:pointer}
   padding:11px 16px; font-size:13px; margin-bottom:16px; display:flex; gap:10px; align-items:center}
 .err-bar button{margin-left:auto; background:#fff; border:1px solid #F1C3CE; color:#B4243F;
   border-radius:7px; padding:5px 11px; font-size:12.5px}
+.sim-banner{background:#EDFAF7; color:#0B6B5E; border:1px solid #B3E8DD; border-radius:var(--radius);
+  padding:11px 16px; font-size:13px; margin-bottom:16px; display:flex; gap:10px; align-items:center}
+.sim-banner b{font-weight:600}
+.sim-banner .sim-icon{width:18px; height:18px; flex:none; border-radius:4px;
+  background:var(--teal); display:inline-flex; align-items:center; justify-content:center;
+  color:#fff; font-size:11px; font-weight:700; line-height:1}
 
 /* ---------- layout ---------- */
 .wrap{max-width:1440px; margin:0 auto; padding:20px 24px 56px}
@@ -216,7 +252,7 @@ tfoot td:first-child{text-align:left}
 <!-- ============ APP ============ -->
 <div id="app">
 <div class="demo-strip" id="demoStrip" hidden>
-  <!--<b>Demo data</b> — running on the sample dataset. Add your Apps Script URL to <b>CONFIG.apiUrl</b> to go live.-->
+  <b>Demo data</b> — running on the sample dataset. Add your Apps Script URL to <b>CONFIG.apiUrl</b> to go live.
 </div>
 <header class="topbar">
   <div class="brand">
@@ -237,6 +273,7 @@ tfoot td:first-child{text-align:left}
 </header>
 
 <div class="wrap" id="wrap">
+  <div class="sim-banner" id="simBanner" hidden><span class="sim-icon">i</span> <span id="simText"><b>Some delivery figures shown are simulated.</b> Simulated data builds up day by day as the campaign progresses — auto-generated estimates based on campaign parameters, not verified figures reported by the media partner. Each day adds a new simulated row until the partner's own delivery replaces it.</span></div>
   <div class="err-bar" id="errBar" hidden><span id="errText"></span><button id="errRetry">Try again</button></div>
   <section class="panel">
     <div class="filters">
@@ -289,7 +326,7 @@ tfoot td:first-child{text-align:left}
       <span class="panel-note" id="tableNote">—</span>
       <span class="spacer"></span>
       <div class="views" id="views" role="group" aria-label="Which figures to show">
-        <button data-v="projected"><i class="sw p"></i>Projections</button>
+        <button data-v="projected"><i class="sw p"></i>Projected</button>
         <button data-v="delivered"><i class="sw d"></i>Delivered</button>
         <button data-v="pacing"><i class="sw b"></i>Pacing</button>
       </div>
@@ -319,6 +356,7 @@ tfoot td:first-child{text-align:left}
         <button data-g="month">Monthly</button>
       </div>
       <span class="hint" id="scopeHint">All campaigns</span>
+      <span class="view-why" id="viewWhy" role="status"></span>
     </div>
     <div class="chart-box" id="chartBox">
       <svg id="chart" role="img" aria-label="Performance over time"></svg>
@@ -571,8 +609,26 @@ const state = {
   view:'pacing',   // projected | delivered | pacing
 };
 
-/** Does anything in scope actually have delivery reported by the partner? */
-function anyActuals(){ return RAW.campaigns.some(c => c.rows && c.rows.length); }
+/**
+ * Does anything the client is currently looking at have delivery reported?
+ * Scoped to the selection, so drilling into a single campaign that has not
+ * reported yet locks the views rather than showing an empty Delivered table.
+ */
+function anyActuals(){
+  const ids = state.focus ? new Set([state.focus])
+            : (state.selected && state.selected.size ? state.selected : null);
+  return RAW.campaigns.some(c => (!ids || ids.has(c.id)) && c.rows && c.rows.length);
+}
+
+/**
+ * Does anything in the current selection rely on simulated data only
+ * (i.e. has delivery but no partner-reported rows)?
+ */
+function anySimulatedOnly(){
+  const ids = state.focus ? new Set([state.focus])
+            : (state.selected && state.selected.size ? state.selected : null);
+  return RAW.campaigns.some(c => (!ids || ids.has(c.id)) && c.hasSimulated && !c.hasPartnerReport);
+}
 
 /** A campaign is ended, running, or not started yet — ISO strings compare correctly. */
 function statusOf(c){
@@ -971,10 +1027,30 @@ thead.addEventListener('click', e => {
 });
 
 /* ---------- view switch ---------- */
+/**
+ * A disabled view is not a broken button — it means the partner has not
+ * reported anything yet. Say so rather than swallowing the click.
+ */
+let whyTimer;
+function explainDisabled(){
+  const el = document.getElementById('viewWhy');
+  const partner = (RAW && RAW.client.partner) || 'the media partner';
+  el.textContent = 'No delivery data available yet — ' + partner + '\u2019s figures appear here once they arrive.';
+  el.classList.add('show');
+  clearTimeout(whyTimer);
+  whyTimer = setTimeout(() => el.classList.remove('show'), 4500);
+}
 document.getElementById('views').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.classList.contains('locked')) return explainDisabled();
   state.view = b.dataset.v;
+  document.getElementById('viewWhy').classList.remove('show');
   render();
+});
+// a disabled button swallows clicks in some browsers, so catch the hover too
+document.getElementById('views').addEventListener('mouseover', e => {
+  const b = e.target.closest('button');
+  if (b && b.classList.contains('locked')) explainDisabled();
 });
 function paceClass(v){
   if (v == null) return '';
@@ -1060,29 +1136,45 @@ function render(){
 
   document.getElementById('tableNote').textContent =
     `${iso(toDate(state.from))} → ${iso(toDate(state.to))} · ${rows.length} live campaign${rows.length===1?'':'s'}`;
-  // View switch: delivered and pacing are unavailable until the partner
-  // reports something, so the client is never shown an empty "delivered" table.
+  // View switch: delivered and pacing are unavailable until any actuals exist,
+  // so the client is never shown an empty "delivered" table.
   const haveActuals = anyActuals();
+  const hasSimOnly = anySimulatedOnly();
   if (!haveActuals) state.view = 'projected';
   [...document.getElementById('views').children].forEach(b => {
     b.classList.toggle('active', b.dataset.v === state.view);
-    b.disabled = !haveActuals && b.dataset.v !== 'pacing';
+    const locked = !haveActuals && b.dataset.v !== 'projected';
+    b.classList.toggle('locked', locked);
+    b.setAttribute('aria-disabled', locked ? 'true' : 'false');
+    b.title = locked ? 'No delivery data is available for this account yet' : '';
   });
+  if (haveActuals) document.getElementById('viewWhy').classList.remove('show');
+
+  // Simulated-data disclaimer banner: shown whenever any selected campaign
+  // has delivery rows that are simulated only (no partner report yet).
+  const simBanner = document.getElementById('simBanner');
+  simBanner.hidden = !hasSimOnly;
 
   const projBar = document.getElementById('projBar');
   if (state.view === 'delivered'){
     projBar.hidden = true;
   } else {
     projBar.hidden = false;
-    document.getElementById('projText').innerHTML = state.view === '-'
-      ? 'from the campaign budget ' +
-        'and the contracted rate at a click-through rate ' +
-        'deliverd ' +
-        (haveActuals ? 'Switch to Delivered for the figures reported by ' + (RAW.client.partner || 'the media partner') + '.'
-                     : 'No delivery has been reported for this account yet.')
-      : '<b>Amber columns and the dashed line </b>from budget and rate, not measured. ' +
-        'Figures marked delivered come from ' + (RAW.client.partner || 'the media partner') + '. ' +
-        'Pacing compares the two.';
+    const partner = RAW.client.partner || 'the media partner';
+    document.getElementById('projText').innerHTML = state.view === 'projected'
+      ? '<b>These are projected figures, not delivery.</b> They are modelled from the campaign budget ' +
+        'and the contracted rate at an expected click-through rate — a forecast of what the buy should ' +
+        'deliver, not a measurement of what it did. ' +
+        (haveActuals
+          ? (hasSimOnly
+              ? 'Switch to Delivered for figures, but note these are simulated estimates that accumulate daily — not yet verified by ' + partner + '.'
+              : 'Switch to Delivered for the figures reported by ' + partner + '.')
+          : 'No delivery data is available for this account yet.')
+      : '<b>Amber columns and the dashed line are projections</b> — modelled from budget and rate, not measured. ' +
+        (hasSimOnly
+          ? 'Blue columns show simulated delivery — auto-generated estimates that build up day by day. They will be replaced by verified figures from ' + partner + ' once imported.'
+          : 'Figures marked delivered come from ' + partner + '.') +
+        ' Pacing compares the two.';
   }
 
   const f = state.focus && RAW.campaigns.find(c => c.id === state.focus);
