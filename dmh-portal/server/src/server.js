@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { createStore } = require('./store');
 const { handle } = require('./api');
+const { iso } = require('./plan');
 const { seedIfEmpty } = require('./seed');
 
 loadEnv(path.join(__dirname, '..', '.env'));
@@ -94,6 +95,14 @@ async function start() {
   await store.init();
   const seeded = await seedIfEmpty(store);
 
+  // ---- Progressive simulation: catch-up on boot, then 30-min tick ----
+  // On server start, run a simulation tick to catch up any campaigns
+  // whose simulated data is behind (e.g. server was down for a while).
+  // Then schedule a periodic tick every 30 minutes so simulated figures
+  // increment intra-day rather than waiting for midnight.
+  await runSimTick(store);
+  schedulePeriodicSimTick(store);
+
   const server = http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') {
       return send(res, 204, '', {
@@ -157,6 +166,55 @@ async function start() {
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
   return { server, store };
+}
+
+/**
+ * Run one simulation tick — advance simulated delivery for all active
+ * campaigns up to today. Called on boot (catch-up) and daily at midnight.
+ */
+async function runSimTick(store) {
+  try {
+    const result = await handle(store, { action: 'admin.simTick' });
+    if (result && result.campaignsAdvanced > 0) {
+      console.log('  [simTick] ' + result.tick + ' — advanced ' + result.campaignsAdvanced + ' campaign(s)');
+    }
+  } catch (e) {
+    console.error('  [simTick] error:', e.message);
+  }
+}
+
+/**
+ * Schedule a periodic simulation tick every 30 minutes.
+ *
+ * After each tick, we re-schedule for the next 30-minute boundary (aligned
+ * to the clock, e.g. :00 or :30). This keeps ticks evenly spaced and
+ * avoids drift. The timer is resilient to server restarts because
+ * runSimTick on boot catches up any missed time.
+ *
+ * Each tick regenerates simulated data up to the current time, using the
+ * time-of-day as a dayFraction so the current day's row gradually fills
+ * in. Past days are unchanged (deterministic PRNG + upsert by compound key).
+ */
+function schedulePeriodicSimTick(store) {
+  const INTERVAL = 30 * 60 * 1000; // 30 minutes in ms
+  const now = new Date();
+  // Align to next 30-min boundary on the clock (:00 or :30 UTC).
+  const mins = now.getUTCMinutes();
+  const secs = now.getUTCSeconds();
+  const ms = now.getUTCMilliseconds();
+  const elapsed = (mins % 30) * 60000 + secs * 1000 + ms;
+  const delay = elapsed > 0 ? INTERVAL - elapsed : 0;
+
+  setTimeout(async () => {
+    await runSimTick(store);
+    // Re-schedule for the next 30-minute boundary.
+    schedulePeriodicSimTick(store);
+  }, delay || INTERVAL);
+
+  const next = new Date(now.getTime() + (delay || INTERVAL));
+  const hh = String(next.getUTCHours()).padStart(2, '0');
+  const mm = String(next.getUTCMinutes()).padStart(2, '0');
+  console.log('  [simTick] next tick at ' + iso(next) + ' ' + hh + ':' + mm + ' UTC (in ' + Math.round((delay || INTERVAL) / 60000) + ' min)');
 }
 
 if (require.main === module) {
