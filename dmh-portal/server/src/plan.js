@@ -329,7 +329,7 @@ function simulateDeliveryUpto(plan, meta, asOf, dayFraction) {
   // We always consume random values for every day to keep the PRNG
   // in the same state, ensuring day N always gets the same noise.
   const noisyFull = rows.map((r, i) => {
-    const noiseRange = 0.10 + rand() * 0.05; // 10–15%
+    const noiseRange = 0.05 + rand() * 0.02; // 10–15%
     const applyNoise = (val) => {
       if (val === 0) return 0;
       const factor = 1 + (rand() * 2 - 1) * noiseRange;
