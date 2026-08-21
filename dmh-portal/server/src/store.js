@@ -130,6 +130,13 @@ function memoryStore(persistPath) {
       }
       return written;
     }),
+    deleteActualsByCampaignAndSource: w(async function (campaignId, source) {
+      const id = String(campaignId);
+      const before = db.actuals.length;
+      db.actuals = db.actuals.filter(a =>
+        !(String(a.campaignId) === id && a.source === source));
+      return before - db.actuals.length;
+    }),
   };
   return api;
 }
@@ -246,6 +253,13 @@ function mongoStore(uri, dbName) {
       }));
       const res = await db.collection('actuals').bulkWrite(ops, { ordered: false });
       return (res.upsertedCount || 0) + (res.modifiedCount || 0);
+    },
+    async deleteActualsByCampaignAndSource(campaignId, source) {
+      const res = await db.collection('actuals').deleteMany({
+        campaignId: String(campaignId),
+        source,
+      });
+      return res.deletedCount || 0;
     },
   };
 }
