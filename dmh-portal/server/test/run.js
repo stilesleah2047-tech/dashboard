@@ -186,10 +186,26 @@ async function throws(label, fn, match) {
   {
     const c = kcbData.campaigns[0];
     ok('the payload carries a projected series', c.plan.length === 31);
-    ok('the payload starts with no delivery', c.rows.length === 0 && c.hasActuals === false);
+    // With progressive simulation, a campaign whose start date is already
+    // in the past will have simulated delivery rows at save time.
+    ok('the payload has simulated delivery for elapsed days', c.hasSimulated === true && c.rows.length > 0);
     ok('projection and delivery are separate fields', Array.isArray(c.plan) && Array.isArray(c.rows));
     ok('whole-flight targets travel with the campaign', c.targets.impressions === 28000000);
     ok('projected-to-date is computed for pacing', c.planToDate.days >= 0);
+  }
+
+  // Also verify that a FUTURE campaign starts with no simulated delivery.
+  {
+    const future = await call('admin.saveCampaign', Object.assign({
+      clientId: 'KCB', campaignId: '41099', name: 'KCB_Future_Campaign',
+      billing: 'cpm', rate: 1.5, ctr: 0.0336, budget: 5000,
+      startDate: '2030-01-01', endDate: '2030-01-31', shape: 'even',
+    }, A));
+    ok('a future campaign has no simulated delivery yet', future.days === 31);
+    const kcbAfter = await call('data', { token: sarah.token, clientId: 'KCB' });
+    const fc = kcbAfter.campaigns.find(x => x.id === 41099);
+    ok('future campaign starts with no delivery rows', fc && fc.rows.length === 0 && fc.hasActuals === false);
+    await call('admin.deleteCampaign', Object.assign({ campaignId: '41099' }, A));
   }
 
   /* ── partner delivery import ───────────────────────────────────────── */
@@ -204,18 +220,110 @@ async function throws(label, fn, match) {
 
     const after = await call('data', { token: sarah.token, clientId: 'KCB' });
     const c = after.campaigns[0];
-    ok('delivery lands in the delivered series', c.rows.length === 2 && c.hasActuals === true);
+    // Partner imports overwrite simulated rows for the same date (compound key),
+    // so the total row count stays the same — simulated for other days,
+    // partner-import for the imported dates. The hasActuals flag is still true.
+    ok('partner import data is in the delivered series', c.hasActuals === true && c.hasPartnerReport === true);
     ok('importing does not touch the projection', c.plan.length === 31);
+    // Check that the partner-import value for 2026-08-01 is correct.
+    // The rows array is sorted by date, so find the first row (2026-08-01).
+    const row0 = c.rows[0]; // date index 0 = 2026-08-01
     ok('delivered impressions are the imported ones, not the projected ones',
-      c.rows[0][1] === 640000 && c.plan[0][1] !== 640000,
-      'delivered ' + c.rows[0][1].toLocaleString() + ' vs projected ' + c.plan[0][1].toLocaleString());
+      row0[1] === 640000 && c.plan[0][1] !== 640000,
+      'delivered ' + row0[1].toLocaleString() + ' vs projected ' + c.plan[0][1].toLocaleString());
 
     const again = await call('admin.importActuals', Object.assign({ rows: [
       { campaignId: '41040', date: '2026-08-01', impressions: 641000, clicks: 21150, spend: 961.5, downloads: 0 },
     ] }, A));
     const third = await call('data', { token: sarah.token, clientId: 'KCB' });
     ok('re-importing a day corrects it rather than duplicating',
-      third.campaigns[0].rows.length === 2 && third.campaigns[0].rows[0][1] === 641000);
+      third.campaigns[0].rows[0][1] === 641000);
+    ok('re-import does not add extra rows',
+      third.campaigns[0].rows.length === c.rows.length);
+  }
+
+  /* ── dayFraction and intra-day simulation ──────────────────────────── */
+  {
+    // dayFractionFromTime tests
+    const midnight = new Date('2026-08-15T00:00:00Z');
+    const noon    = new Date('2026-08-15T12:00:00Z');
+    const sixPM   = new Date('2026-08-15T18:00:00Z');
+    const _11pm   = new Date('2026-08-15T23:00:00Z');
+    const _11_59  = new Date('2026-08-15T23:59:00Z');
+    ok('dayFractionFromTime at midnight = 0', plan.dayFractionFromTime(midnight) === 0);
+    ok('dayFractionFromTime at noon = 0.5', plan.dayFractionFromTime(noon) === 0.5);
+    ok('dayFractionFromTime at 18:00 = 0.75', plan.dayFractionFromTime(sixPM) === 0.75);
+    ok('dayFractionFromTime at 23:00 ≈ 0.9583',
+      Math.abs(plan.dayFractionFromTime(_11pm) - 23 / 24) < 1e-9);
+    ok('dayFractionFromTime at 23:59 ≈ 0.9993',
+      Math.abs(plan.dayFractionFromTime(_11_59) - (23 * 60 + 59) / 1440) < 1e-9);
+
+    // planToDate with dayFraction scales the last day
+    const pFull = plan.buildPlan({ budget: 3000, billing: 'cpm', rate: 1.5, ctr: 0.03,
+      startDate: '2026-08-01', endDate: '2026-08-10' });
+    const fullDate = plan.planToDate(pFull.rows, '2026-08-10');
+    const halfDate = plan.planToDate(pFull.rows, '2026-08-10', 0.5);
+    ok('planToDate with frac=0.5 has fewer days than full', halfDate.days < fullDate.days,
+      halfDate.days.toFixed(2) + ' < ' + fullDate.days);
+    ok('planToDate with frac=0.5 has less spend than full', halfDate.spend < fullDate.spend);
+    ok('planToDate half-spend ≈ full minus half of last day',
+      Math.abs(halfDate.spend - (fullDate.spend - pFull.rows[9].spend * 0.5)) < 0.01,
+      'half $' + halfDate.spend.toFixed(2) + ' full $' + fullDate.spend.toFixed(2));
+
+    // planToDate with frac=0 excludes the asOf day
+    const zeroDate = plan.planToDate(pFull.rows, '2026-08-10', 0);
+    const nineDate = plan.planToDate(pFull.rows, '2026-08-09');
+    ok('planToDate frac=0 excludes asOf day (9 days)', zeroDate.days === 9, zeroDate.days + ' days');
+    ok('planToDate frac=0 spend equals planToDate to day before',
+      Math.abs(zeroDate.spend - nineDate.spend) < 0.01);
+
+    // simulateDeliveryUpto with dayFraction
+    const meta = { clientCode: 'KCB', campaignId: '41040' };
+    const simFull = plan.simulateDeliveryUpto(pFull, meta, '2026-08-10');
+    const simHalf = plan.simulateDeliveryUpto(pFull, meta, '2026-08-10', 0.5);
+    const simZero = plan.simulateDeliveryUpto(pFull, meta, '2026-08-10', 0);
+
+    ok('full simulation has 10 rows', simFull.length === 10);
+    ok('half-fraction simulation has 10 rows (same count)', simHalf.length === 10);
+    ok('zero-fraction simulation has 9 rows (excludes last day)', simZero.length === 9);
+
+    // Rescaling means individual day values are adjusted proportionally
+    // so the cumulative total matches the partial target. Therefore the
+    // last day is NOT exactly half — but the cumulative total should be
+    // approximately (9.5 / 10) of the full cumulative total.
+    const cumSpend = (arr) => arr.reduce((s, r) => s + r.spend, 0);
+    const cumFull = cumSpend(simFull);
+    const cumHalf = cumSpend(simHalf);
+    const cumZero = cumSpend(simZero);
+    // Half-fraction cumulative should be roughly 95% of full (9.5 out of 10 days)
+    ok('half-fraction cumulative spend ≈ 95% of full',
+      Math.abs(cumHalf / cumFull - 0.95) < 0.02,
+      'half $' + cumHalf.toFixed(2) + ' / full $' + cumFull.toFixed(2) + ' = ' + (cumHalf / cumFull).toFixed(4));
+    // Zero-fraction cumulative should be roughly 90% of full (9 out of 10 days)
+    ok('zero-fraction cumulative spend ≈ 90% of full',
+      Math.abs(cumZero / cumFull - 0.90) < 0.02,
+      'zero $' + cumZero.toFixed(2) + ' / full $' + cumFull.toFixed(2) + ' = ' + (cumZero / cumFull).toFixed(4));
+    // Half-fraction last day should be smaller than full last day
+    ok('half-fraction last day spend < full last day spend',
+      simHalf[9].spend < simFull[9].spend,
+      'half $' + simHalf[9].spend.toFixed(2) + ' < full $' + simFull[9].spend.toFixed(2));
+
+    // Zero-fraction and full-simulation first-9-days have DIFFERENT rescaling
+    // (zero targets 9/10 of plan, full targets 10/10 of plan), so their daily
+    // values differ. But their cumulative totals should be close since both
+    // cover roughly the same time span.
+    ok('zero-fraction cumulative is same order as first-9-days of full',
+      Math.abs(cumZero - simFull.slice(0, 9).reduce((s, r) => s + r.spend, 0)) / cumFull < 0.05,
+      'zero $' + cumZero.toFixed(2) + ' vs full9 $' + simFull.slice(0, 9).reduce((s, r) => s + r.spend, 0).toFixed(2));
+
+    // dayFraction=1 should be backward-compatible (same as no dayFraction)
+    // Note: importedAt timestamp changes between calls, so compare only data fields.
+    const simExplicit1 = plan.simulateDeliveryUpto(pFull, meta, '2026-08-10', 1);
+    const stripMeta = (arr) => arr.map(r => ({
+      date: r.date, impressions: r.impressions, clicks: r.clicks,
+      spend: r.spend, downloads: r.downloads, source: r.source }));
+    ok('dayFraction=1 gives same result as default',
+      JSON.stringify(stripMeta(simExplicit1)) === JSON.stringify(stripMeta(simFull)));
   }
 
   /* ── disabling ─────────────────────────────────────────────────────── */
