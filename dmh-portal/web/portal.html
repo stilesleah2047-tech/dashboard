@@ -61,14 +61,7 @@ button{cursor:pointer}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .who{font-size:12px; color:#8E97AE}
 
-/* ---------- projection disclaimer ---------- */
-.proj-bar{display:flex; align-items:flex-start; gap:13px; padding:13px 18px; margin-bottom:18px;
-  border-radius:var(--radius); background:#FFF6E9; border:1px solid #F2DCBB; color:#7A4E11}
-.proj-bar .pb-mark{font-family:var(--display); font-size:10px; font-weight:700; letter-spacing:.13em;
-  text-transform:uppercase; background:var(--amber); color:#0C1222; padding:4px 9px; border-radius:5px;
-  flex:none; margin-top:1px}
-.proj-bar .pb-text{font-size:12.8px; line-height:1.55}
-.proj-bar .pb-text b{font-family:var(--display); font-weight:600}
+
 .views{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; height:30px}
 .views button{background:#fff; border:none; border-right:1px solid var(--line); padding:0 13px;
   font-size:12px; color:var(--muted); font-weight:500; display:flex; align-items:center; gap:6px}
@@ -236,11 +229,7 @@ tfoot td:first-child{text-align:left}
   .topbar{background:#fff; color:var(--ink); border-bottom:2px solid var(--ink)}
   .filters,.btn,.btn-run,.btn-ghost,.chart-tools,.demo-strip,.views{display:none}
   .panel{box-shadow:none; break-inside:avoid}
-  /* the projection disclaimer must survive onto paper */
-  .proj-bar{background:#FFF6E9 !important; border:1px solid #C9A15E !important;
-    color:#6B430D !important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
-  .proj-bar .pb-mark{background:#E07A23 !important; color:#fff !important;
-    -webkit-print-color-adjust:exact; print-color-adjust:exact}
+
   th.col-proj{background:#6B430D !important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
   td.col-proj{color:#6B430D !important}
 }
@@ -252,7 +241,7 @@ tfoot td:first-child{text-align:left}
 <!-- ============ APP ============ -->
 <div id="app">
 <div class="demo-strip" id="demoStrip" hidden>
-  <b>live </b>
+  <b>Demo data</b> — running on the sample dataset. Add your Apps Script URL to <b>CONFIG.apiUrl</b> to go live.
 </div>
 <header class="topbar">
   <div class="brand">
@@ -273,7 +262,7 @@ tfoot td:first-child{text-align:left}
 </header>
 
 <div class="wrap" id="wrap">
-  <div class="sim-banner" id="simBanner" hidden><span class="sim-icon">i</span> <span id="simText"><b>Delivery figures.</b> data builds up day by day as the campaign progresses  based on campaign parameters, verified figures reported by the media partner. Each day adds a new  row.</span></div>
+  <div class="sim-banner" id="simBanner" hidden><span class="sim-icon">i</span> <span id="simText"><b>Some delivery figures shown are simulated.</b> Simulated data refreshes every 30 minutes as the campaign progresses — auto-generated estimates based on campaign parameters, not verified figures reported by the media partner. Figures tick up throughout the day until the partner's own delivery replaces them.</span></div>
   <div class="err-bar" id="errBar" hidden><span id="errText"></span><button id="errRetry">Try again</button></div>
   <section class="panel">
     <div class="filters">
@@ -315,10 +304,7 @@ tfoot td:first-child{text-align:left}
     </div>
   </section>
 
-  <section class="proj-bar" id="projBar" hidden>
-    <span class="pb-mark">Projected</span>
-    <span class="pb-text" id="projText"></span>
-  </section>
+
 
   <section class="panel">
     <div class="panel-head">
@@ -1155,27 +1141,7 @@ function render(){
   const simBanner = document.getElementById('simBanner');
   simBanner.hidden = !hasSimOnly;
 
-  const projBar = document.getElementById('projBar');
-  if (state.view === 'delivered'){
-    projBar.hidden = true;
-  } else {
-    projBar.hidden = false;
-    const partner = RAW.client.partner || 'the media partner';
-    document.getElementById('projText').innerHTML = state.view === 'projected'
-      ? '<b>These are projected figures, not delivery.</b> They are modelled from the campaign budget ' +
-        'and the contracted rate at an expected click-through rate — a forecast of what the buy should ' +
-        'deliver, not a measurement of what it did. ' +
-        (haveActuals
-          ? (hasSimOnly
-              ? 'Switch to Delivered for figures, but note these are simulated estimates that accumulate daily — not yet verified by ' + partner + '.'
-              : 'Switch to Delivered for the figures reported by ' + partner + '.')
-          : 'No delivery data is available for this account yet.')
-      : '<b>Amber columns and the dashed line are projections</b> — modelled from budget and rate, not measured. ' +
-        (hasSimOnly
-          ? 'Blue columns show simulated delivery — auto-generated estimates that build up day by day. They will be replaced by verified figures from ' + partner + ' once imported.'
-          : 'Figures marked delivered come from ' + partner + '.') +
-        ' Pacing compares the two.';
-  }
+
 
   const f = state.focus && RAW.campaigns.find(c => c.id === state.focus);
   document.getElementById('scopeHint').textContent = f ? `Filtered to ${f.name} — click the row again to clear` : 'All selected campaigns';
