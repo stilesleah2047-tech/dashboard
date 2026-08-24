@@ -5,6 +5,14 @@ const { deriveTargets, buildPlan, planToDate, iso, toDate, dayCount,
         dayFractionFromTime,
         BILLING, normaliseBilling, simulateDelivery, simulateDeliveryUpto } = require('./plan');
 
+// Tick monitoring state from server.js (in-process reference)
+let _tickLog = [];
+let _getNextTickTime = () => null;
+function attachTickState(tickLog, getNextTickTime) {
+  _tickLog = tickLog;
+  _getNextTickTime = getNextTickTime;
+}
+
 const upper = s => String(s || '').trim().toUpperCase();
 const lower = s => String(s || '').trim().toLowerCase();
 const num = v => { const n = Number(String(v).replace(/[, %$]/g, '')); return isFinite(n) ? n : 0; };
@@ -287,21 +295,14 @@ async function saveCampaign(store, req) {
     targets: plan.targets, plan: plan.rows,
   });
 
-  // Auto-generate simulated delivery data up to now (inclusive of today,
-  // scaled by the current time-of-day fraction).
-  // Remove any previous simulated actuals first (e.g. flight dates changed),
-  // then generate fresh ones from the plan. The simulation now ticks up
-  // every 30 minutes — days from campaign start through today are generated,
-  // with today's row scaled by the dayFraction so figures feel "live".
-  // A periodic scheduler (simTick) updates the current day's row every
-  // 30 minutes. Real partner-import data on the same date will overwrite
-  // simulated rows.
-  const now = new Date();
-  const today = iso(now);
-  const frac = dayFractionFromTime(now);
+  // Newly saved campaigns start with zero simulated delivery data.
+  // The periodic sim tick (every 30 min) will generate simulated actuals
+  // from the campaign's createdAt date forward, so figures accumulate
+  // gradually from the moment the campaign is created rather than being
+  // backfilled from the campaign start date.
+  // Remove any previous simulated actuals (e.g. flight dates changed on
+  // an edit), but do NOT regenerate them — the next tick handles it.
   await store.deleteActualsByCampaignAndSource(campaignId, 'simulated');
-  const simRows = simulateDeliveryUpto(plan, { clientCode, campaignId }, today, frac);
-  if (simRows.length) await store.upsertActuals(simRows);
 
   return Object.assign(res, { targets: plan.targets, days: plan.days });
 }
@@ -358,11 +359,25 @@ async function simTick(store, req) {
       startDate: c.startDate, endDate: c.endDate, shape: c.shape,
     });
 
-    // Generate simulated data up to now. The dayFraction parameter scales
-    // today's row so simulated figures tick up intra-day. Past days' rows
-    // are unchanged because the PRNG is deterministic and dayFraction=1
-    // for them. Upsert with the compound key means no duplication.
-    const simRows = simulateDeliveryUpto(plan, { clientCode: c.clientCode, campaignId: c.campaignId }, today, frac);
+    // Generate simulated data from the campaign's creation moment forward.
+    // This ensures newly-created campaigns start at zero simulated data and
+    // only accumulate from their createdAt instant onward. The dayFraction
+    // parameter scales today's row so simulated figures tick up intra-day.
+    // Past days' rows are unchanged because the PRNG is deterministic and
+    // dayFraction=1 for them. Upsert with the compound key means no
+    // duplication.
+    //
+    // simStart = the date the campaign was created (date-only).
+    // simStartFraction = the fraction of that day that had already elapsed
+    // at creation time. E.g. created at 10:30 UTC → fraction ≈ 0.4375.
+    // Together these ensure the first day only shows data from the exact
+    // creation minute onward, not from midnight.
+    const simStartRaw = c.createdAt || c.startDate;
+    const simStart = simStartRaw.length > 10 ? simStartRaw.slice(0, 10) : simStartRaw;
+    const simStartFraction = c.createdAt
+      ? dayFractionFromTime(new Date(c.createdAt))
+      : 0;
+    const simRows = simulateDeliveryUpto(plan, { clientCode: c.clientCode, campaignId: c.campaignId }, today, frac, simStart, simStartFraction);
     if (simRows.length) {
       await store.upsertActuals(simRows);
       advanced++;
@@ -404,6 +419,53 @@ async function importActuals(store, req) {
   return { written, skipped: skipped.length, skippedIds: skipped.slice(0, 10) };
 }
 
+/* ── admin: tick status ─────────────────────────────────────────────── */
+async function tickStatus(store, req) {
+  await requireAdmin(store, req);
+  const now = new Date();
+  const frac = dayFractionFromTime(now);
+  const next = _getNextTickTime();
+
+  // Per-campaign simulation progress
+  const campaigns = await store.listCampaigns();
+  const today = iso(now);
+  const campaignProgress = [];
+  for (const c of campaigns) {
+    const start = c.startDate, end = c.endDate;
+    const totalDays = dayCount(start, end);
+    const isInFlight = start <= today && end >= today;
+    const isFuture = start > today;
+    let status = 'completed';
+    let progress = 1;
+    if (isInFlight) {
+      status = 'in-flight';
+      const flightElapsed = dayCount(start, today) - 1 + frac;
+      progress = Math.min(1, flightElapsed / totalDays);
+    } else if (isFuture) {
+      status = 'upcoming';
+      progress = 0;
+    }
+    const lastTick = _tickLog.length ? _tickLog[_tickLog.length - 1] : null;
+    campaignProgress.push({
+      campaignId: c.campaignId,
+      name: c.name,
+      clientCode: c.clientCode,
+      status,
+      dayFraction: Math.round(frac * 10000) / 10000,
+      flightProgress: Math.round(progress * 1000) / 10,
+      lastTickAdvanced: lastTick ? (lastTick.campaignsAdvanced > 0 && isInFlight) : false,
+    });
+  }
+
+  return {
+    tickLog: _tickLog.slice(-50),
+    nextTickTime: next ? next.toISOString() : null,
+    currentDayFraction: Math.round(frac * 10000) / 10000,
+    serverTime: now.toISOString(),
+    campaigns: campaignProgress,
+  };
+}
+
 /* ── router ───────────────────────────────────────────────────────────── */
 const ROUTES = {
   'login': login,
@@ -420,6 +482,7 @@ const ROUTES = {
   'admin.previewPlan': previewPlan,
   'admin.importActuals': importActuals,
   'admin.simTick': simTick,
+  'admin.tickStatus': tickStatus,
   'simTick': simTick,
   'ping': async () => ({ service: 'DMH reporting', time: new Date().toISOString() }),
 };
@@ -431,4 +494,4 @@ async function handle(store, req) {
   return Object.assign({ ok: true }, out);
 }
 
-module.exports = { handle, ROUTES };
+module.exports = { handle, ROUTES, attachTickState };
