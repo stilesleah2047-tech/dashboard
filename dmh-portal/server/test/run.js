@@ -186,12 +186,65 @@ async function throws(label, fn, match) {
   {
     const c = kcbData.campaigns[0];
     ok('the payload carries a projected series', c.plan.length === 31);
-    // With progressive simulation, a campaign whose start date is already
-    // in the past will have simulated delivery rows at save time.
-    ok('the payload has simulated delivery for elapsed days', c.hasSimulated === true && c.rows.length > 0);
+    // Newly saved campaigns start with zero simulated delivery data.
+    // Simulated data only accumulates from the creation date forward,
+    // via the periodic sim tick — not backfilled from campaign start.
+    ok('newly saved campaign starts with no simulated delivery', c.rows.length === 0);
     ok('projection and delivery are separate fields', Array.isArray(c.plan) && Array.isArray(c.rows));
     ok('whole-flight targets travel with the campaign', c.targets.impressions === 28000000);
     ok('projected-to-date is computed for pacing', c.planToDate.days >= 0);
+  }
+
+  // Sim tick generates simulated data from the campaign's createdAt forward.
+  // When simTick runs in the same 15-min slot as creation, dayFraction
+  // equals simStartFraction. The function still emits a row for today
+  // with the minimum 1/96 fraction (~15 min) because simTick granularity
+  // is at least one slot. So rows will always be ≥ 1 after a sim tick.
+  {
+    await call('admin.simTick', A);
+    const kcbAfterTick = await call('data', { token: sarah.token, clientId: 'KCB' });
+    const c = kcbAfterTick.campaigns[0];
+    ok('after a sim tick, campaign has simulated delivery',
+      c.hasSimulated === true && c.rows.length > 0,
+      'hasSimulated=' + c.hasSimulated + ' rows=' + c.rows.length);
+  }
+
+  // simStartFraction controls minute-level precision: a campaign created
+  // mid-day only simulates from that minute onward.
+  {
+    const p = plan.buildPlan({
+      budget: 30000, billing: 'cpm', rate: 1.5, ctr: 0.0336,
+      startDate: '2026-08-01', endDate: '2026-08-31', shape: 'even',
+    });
+    // Full flight (no simStart) — baseline for comparison.
+    const full = plan.simulateDeliveryUpto(p, { clientCode: 'TST', campaignId: '99100' }, '2026-08-01', 1);
+    // Created at 10:30 UTC on Aug 1 → simStartFraction ≈ 0.4375.
+    // The first day should only show ~56.25% of the full-day values.
+    const fromMidMorning = plan.simulateDeliveryUpto(
+      p, { clientCode: 'TST', campaignId: '99100' }, '2026-08-01', 1,
+      '2026-08-01', 0.4375
+    );
+    ok('simStartFraction reduces first-day values',
+      fromMidMorning[0].impressions < full[0].impressions,
+      fromMidMorning[0].impressions + ' < ' + full[0].impressions);
+    // The remaining fraction of day 1 should be ~56.25% of the full day.
+    const ratio = fromMidMorning[0].impressions / full[0].impressions;
+    ok('first-day ratio is roughly 1 minus simStartFraction',
+      ratio > 0.50 && ratio < 0.62,
+      'ratio = ' + ratio.toFixed(4));
+    // When simStart == asOf and dayFraction == simStartFraction on the
+    // same day, the minimum fraction (1/96) is used so that a freshly-created
+    // campaign still produces a row after its first tick.
+    const minSlice = plan.simulateDeliveryUpto(
+      p, { clientCode: 'TST', campaignId: '99100' }, '2026-08-01', 0.4375,
+      '2026-08-01', 0.4375
+    );
+    ok('same-day same-slot tick produces 1 row with minimum fraction',
+      minSlice.length === 1, 'length=' + minSlice.length);
+    // The values should be tiny (~1/96 of a full day's output).
+    ok('minimum-fraction row has small impressions',
+      minSlice[0].impressions > 0 && minSlice[0].impressions < full[0].impressions,
+      minSlice[0].impressions + ' < ' + full[0].impressions);
   }
 
   // Also verify that a FUTURE campaign starts with no simulated delivery.
@@ -324,6 +377,26 @@ async function throws(label, fn, match) {
       spend: r.spend, downloads: r.downloads, source: r.source }));
     ok('dayFraction=1 gives same result as default',
       JSON.stringify(stripMeta(simExplicit1)) === JSON.stringify(stripMeta(simFull)));
+  }
+
+  /* ── tick status ─────────────────────────────────────────────────────── */
+  {
+    const tickRes = await call('admin.tickStatus', A);
+    ok('tickStatus returns tickLog array', Array.isArray(tickRes.tickLog));
+    ok('tickStatus returns nextTickTime', tickRes.nextTickTime === null || typeof tickRes.nextTickTime === 'string');
+    ok('tickStatus returns currentDayFraction', typeof tickRes.currentDayFraction === 'number' && tickRes.currentDayFraction >= 0 && tickRes.currentDayFraction <= 1);
+    ok('tickStatus returns serverTime', typeof tickRes.serverTime === 'string');
+    ok('tickStatus returns campaigns array', Array.isArray(tickRes.campaigns));
+    if (tickRes.campaigns.length) {
+      const c = tickRes.campaigns[0];
+      ok('tickStatus campaign has name', typeof c.name === 'string');
+      ok('tickStatus campaign has status', ['in-flight', 'upcoming', 'completed'].includes(c.status));
+      ok('tickStatus campaign has flightProgress', typeof c.flightProgress === 'number');
+    } else {
+      ok('tickStatus campaigns empty (no campaigns yet)', true);
+    }
+    await throws('a client cannot call tickStatus',
+      () => call('admin.tickStatus', { token: sarah.token }), /Administrator access only/);
   }
 
   /* ── disabling ─────────────────────────────────────────────────────── */
