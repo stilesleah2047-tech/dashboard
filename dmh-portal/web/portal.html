@@ -837,15 +837,6 @@ function drawChart(rows, planRows){
     g += `<text x="${x(i)}" y="${P.t+ih+20}" text-anchor="middle" fill="#98A1B5"
       font-family="Inter,sans-serif" font-size="11">${lab}</text>`;
   }
-  // Projected line first, dashed and amber, so the solid delivered line reads
-  // as the real one. Only drawn when the view includes the projection.
-  if (planRows && planRows.length === n && state.view !== 'delivered'){
-    const s = scales[0], m = METRICS[s.k];
-    const pp = planRows.map((r,i) => [x(i), y(r[s.k], s)]);
-    const pl = pp.map((p,i) => `${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-    g += `<path d="${pl}" fill="none" stroke="#FF8A3D" stroke-width="1.8" stroke-dasharray="6 4"
-      stroke-linejoin="round" stroke-linecap="round" opacity=".85"></path>`;
-  }
   scales.forEach((s, si) => {
     const m = METRICS[s.k];
     const pts = rows.map((r,i) => [x(i), y(r[s.k], s)]);
@@ -889,11 +880,6 @@ box.addEventListener('mousemove', e => {
       return `<div class="tip-row"><i style="background:${m.color}"></i>${m.label}` +
         `<b>${row[k]==null?'—':m.fmt(row[k])}</b></div>`;
     }).join('');
-  }
-  if (CH.plan && CH.plan[i] && state.view !== 'delivered'){
-    const k = state.active[0], m = METRICS[k], pv = CH.plan[i][k];
-    html += `<div class="tip-row"><i style="background:#FF8A3D"></i>${m.label} projected` +
-      `<b>${pv==null?'—':m.fmt(pv)}</b></div>`;
   }
   tip.innerHTML = html;
   tip.style.opacity = 1;
