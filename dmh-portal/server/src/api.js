@@ -295,14 +295,31 @@ async function saveCampaign(store, req) {
     targets: plan.targets, plan: plan.rows,
   });
 
-  // Newly saved campaigns start with zero simulated delivery data.
-  // The periodic sim tick (every 30 min) will generate simulated actuals
-  // from the campaign's createdAt date forward, so figures accumulate
-  // gradually from the moment the campaign is created rather than being
-  // backfilled from the campaign start date.
-  // Remove any previous simulated actuals (e.g. flight dates changed on
-  // an edit), but do NOT regenerate them — the next tick handles it.
+  // Simulated delivery is modelled from the FLIGHT itself, not from when the
+  // campaign was entered into the dashboard. A media partner delivers against
+  // the flight dates, so a campaign whose flight already started (even if it
+  // is only being added to the portal today) must show the delivery that has
+  // already elapsed — from the flight start date up to right now — rather than
+  // an empty report.
+  //
+  // First clear any previous simulated rows (e.g. the flight dates changed on
+  // an edit), then regenerate immediately so the report is populated the
+  // moment the campaign is saved — no waiting for the next 30-minute tick.
+  //
+  //   • Flight already started  → fills every elapsed day, today scaled by the
+  //                               current time-of-day fraction.
+  //   • Flight starts today     → shows just today's partial (accumulates).
+  //   • Flight starts in future → nothing yet (simulateDeliveryUpto returns []).
   await store.deleteActualsByCampaignAndSource(campaignId, 'simulated');
+
+  const now = new Date();
+  const simRows = simulateDeliveryUpto(
+    plan,
+    { clientCode, campaignId },
+    iso(now),
+    dayFractionFromTime(now),
+  );
+  if (simRows.length) await store.upsertActuals(simRows);
 
   return Object.assign(res, { targets: plan.targets, days: plan.days });
 }
@@ -359,25 +376,20 @@ async function simTick(store, req) {
       startDate: c.startDate, endDate: c.endDate, shape: c.shape,
     });
 
-    // Generate simulated data from the campaign's creation moment forward.
-    // This ensures newly-created campaigns start at zero simulated data and
-    // only accumulate from their createdAt instant onward. The dayFraction
-    // parameter scales today's row so simulated figures tick up intra-day.
-    // Past days' rows are unchanged because the PRNG is deterministic and
-    // dayFraction=1 for them. Upsert with the compound key means no
-    // duplication.
-    //
-    // simStart = the date the campaign was created (date-only).
-    // simStartFraction = the fraction of that day that had already elapsed
-    // at creation time. E.g. created at 10:30 UTC → fraction ≈ 0.4375.
-    // Together these ensure the first day only shows data from the exact
-    // creation minute onward, not from midnight.
-    const simStartRaw = c.createdAt || c.startDate;
-    const simStart = simStartRaw.length > 10 ? simStartRaw.slice(0, 10) : simStartRaw;
-    const simStartFraction = c.createdAt
-      ? dayFractionFromTime(new Date(c.createdAt))
-      : 0;
-    const simRows = simulateDeliveryUpto(plan, { clientCode: c.clientCode, campaignId: c.campaignId }, today, frac, simStart, simStartFraction);
+    // Generate simulated data for the elapsed flight: every day from the
+    // flight start up to today, with today scaled by the current time-of-day
+    // fraction so figures tick up intra-day. Simulation follows the FLIGHT,
+    // not the date the campaign was entered into the portal — a partner
+    // delivers against the flight, so a backdated campaign shows the delivery
+    // that has already happened. Past days are deterministic (same PRNG,
+    // dayFraction=1) and upsert on the compound key campaignId+date, so
+    // re-running a tick never duplicates or disturbs settled days.
+    const simRows = simulateDeliveryUpto(
+      plan,
+      { clientCode: c.clientCode, campaignId: c.campaignId },
+      today,
+      frac,
+    );
     if (simRows.length) {
       await store.upsertActuals(simRows);
       advanced++;
