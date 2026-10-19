@@ -296,20 +296,15 @@ function simulateDelivery(plan, meta) {
  * @param {string|null} asOf - ISO date cutoff (inclusive). Null = full flight.
  * @param {number} [dayFraction=1] - Fraction of the asOf day elapsed (0–1).
  *   0 = exclude the asOf day; 0.5 = half the day; 1 = full day (default).
- * @param {string|null} [simStart=null] - ISO date of first day to include.
- *   Days before simStart are skipped in the output but their PRNG values
- *   are still consumed to keep the deterministic sequence. Null = include
- *   from campaign start. Used so newly-created campaigns start at 0 and
- *   only accumulate simulated data from their creation date forward.
- * @param {number} [simStartFraction=0] - Fraction of the simStart day that
- *   had ALREADY elapsed when the campaign was created (0–1). For example,
- *   a campaign created at 10:30 UTC has simStartFraction ≈ 0.4375.
- *   The first day's output is scaled by the REMAINING fraction
- *   (1 − simStartFraction for past days, dayFraction − simStartFraction
- *   when simStart equals asOf). 0 means the full first day is included.
+ * @param {string|null} [simStart=null] - Optional ISO date of the first day
+ *   to include in the output. Days before it are skipped but their PRNG
+ *   values are still consumed to keep the deterministic sequence intact.
+ *   Null (the default) includes the whole flight from its start date, which
+ *   is what the portal uses so a campaign's simulated delivery follows the
+ *   flight itself rather than when it was entered into the dashboard.
  * @returns {Array} Actuals-compatible rows with source='simulated'.
  */
-function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart, simStartFraction) {
+function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart) {
   dayFraction = dayFraction != null ? dayFraction : 1;
 
   const { rows, targets } = plan;
@@ -332,6 +327,12 @@ function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart, simStartF
     : rows.length;
   let nDays = upTo === -1 ? rows.length : (upTo < 0 ? rows.length : upTo);
 
+  // dayFraction only ever scales the cutoff day ITSELF. If the last included
+  // flight day falls before the cutoff (the flight already ended), every
+  // included day is complete, so the fraction must not touch the final day.
+  const cutoffDayIncluded = cutoff && nDays > 0 && rows[nDays - 1].date === cutoff;
+  if (!cutoffDayIncluded) dayFraction = 1;
+
   // If dayFraction ≤ 0, the asOf day hasn't started yet — skip it.
   if (dayFraction <= 0 && nDays > 0) nDays -= 1;
   if (nDays <= 0) return []; // campaign hasn't started yet
@@ -340,7 +341,7 @@ function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart, simStartF
   // We always consume random values for every day to keep the PRNG
   // in the same state, ensuring day N always gets the same noise.
   const noisyFull = rows.map((r, i) => {
-    const noiseRange = 0.05 + rand() * 0.025; // 10–15%
+    const noiseRange = 0.10 + rand() * 0.05; // 10–15%
     const applyNoise = (val) => {
       if (val === 0) return 0;
       const factor = 1 + (rand() * 2 - 1) * noiseRange;
@@ -364,51 +365,10 @@ function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart, simStartF
   if (startIdx < 0 || startIdx >= nDays) return [];
 
   // --- Phase 2: rescale the PARTIAL slice (days startIdx..nDays-1) ------------
-  // simStartFraction: the fraction of the simStart day that had already
-  // elapsed when the campaign was created. The remaining fraction of that
-  // first day is (1 − simStartFraction) for completed days, or
-  // (dayFraction − simStartFraction) when simStart equals asOf.
-  simStartFraction = simStartFraction || 0;
-  const firstIsToday = (cutoff && simStartIso && simStartIso === cutoff);
-  let firstDayFrac = firstIsToday
-    ? Math.max(0, dayFraction - simStartFraction)
-    : (simStartFraction > 0 ? 1 - simStartFraction : 1);
-
-  // If the first day's remaining fraction is zero or negative, skip it
-  // entirely — unless the first day is today (firstIsToday). When the
-  // first day is today, even a zero remaining fraction means the campaign
-  // was just created this minute. We still emit a row for today with a
-  // minimum fraction of 1/96 (~15 min), matching the simTick granularity.
-  // This ensures a freshly-created campaign always shows simulated data
-  // after the first tick.
-  let effectiveStart = startIdx;
-  if (firstDayFrac <= 0 && !firstIsToday) {
-    effectiveStart = startIdx + 1;
-  } else if (firstDayFrac <= 0 && firstIsToday) {
-    firstDayFrac = 1 / 96;
-  }
-  if (effectiveStart >= nDays) return [];
-
-  // Calculate plan totals — each day's fraction:
-  //   - first day: firstDayFrac (remaining from creation time) — only if
-  //     we didn't skip it (effectiveStart > startIdx)
-  //   - last day (if partial): dayFraction
-  //   - middle days: 1
-  //   - if first == last (same day): combine both adjustments
+  // Calculate plan totals — the last day is scaled by dayFraction if < 1.
   const planTotalsPartial = { spend: 0, impressions: 0, clicks: 0, downloads: 0 };
-  for (let i = effectiveStart; i < nDays; i++) {
-    let frac = 1;
-    const isFirst = (i === effectiveStart);
-    const isLast = (i === nDays - 1);
-    if (isFirst && isLast) {
-      // first==last: use firstDayFrac if first day wasn't skipped,
-      // otherwise dayFraction
-      frac = (effectiveStart === startIdx) ? firstDayFrac : dayFraction;
-    } else if (isFirst) {
-      frac = (effectiveStart === startIdx) ? firstDayFrac : 1;
-    } else if (isLast && dayFraction > 0 && dayFraction < 1) {
-      frac = dayFraction;
-    }
+  for (let i = startIdx; i < nDays; i++) {
+    const frac = (i === nDays - 1 && dayFraction > 0 && dayFraction < 1) ? dayFraction : 1;
     planTotalsPartial.spend += rows[i].spend * frac;
     planTotalsPartial.impressions += rows[i].impressions * frac;
     planTotalsPartial.clicks += rows[i].clicks * frac;
@@ -425,26 +385,16 @@ function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart, simStartF
     downloads:   planTotalsPartial.downloads * overDelivery,
   };
 
-  // Build the slice, scaling noisy values by the per-day fraction.
-  const sliceLen = nDays - effectiveStart;
-  const slice = noisyFull.slice(effectiveStart, nDays).map((r, i) => {
-    const isFirst = (i === 0);
-    const isLast = (i === sliceLen - 1);
-    let frac = 1;
-    if (isFirst && isLast) {
-      frac = (effectiveStart === startIdx) ? firstDayFrac : dayFraction;
-    } else if (isFirst) {
-      frac = (effectiveStart === startIdx) ? firstDayFrac : 1;
-    } else if (isLast && dayFraction > 0 && dayFraction < 1) {
-      frac = dayFraction;
-    }
-    if (frac < 1) {
+  // Build the slice, scaling the last day's noisy values by dayFraction.
+  const sliceLen = nDays - startIdx;
+  const slice = noisyFull.slice(startIdx, nDays).map((r, i) => {
+    if (i === sliceLen - 1 && dayFraction > 0 && dayFraction < 1) {
       return {
         date: r.date,
-        spend: r.spend * frac,
-        impressions: r.impressions * frac,
-        clicks: r.clicks * frac,
-        downloads: r.downloads * frac,
+        spend: r.spend * dayFraction,
+        impressions: r.impressions * dayFraction,
+        clicks: r.clicks * dayFraction,
+        downloads: r.downloads * dayFraction,
       };
     }
     return { date: r.date, spend: r.spend, impressions: r.impressions,
