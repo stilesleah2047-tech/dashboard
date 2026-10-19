@@ -186,65 +186,80 @@ async function throws(label, fn, match) {
   {
     const c = kcbData.campaigns[0];
     ok('the payload carries a projected series', c.plan.length === 31);
-    // Newly saved campaigns start with zero simulated delivery data.
-    // Simulated data only accumulates from the creation date forward,
-    // via the periodic sim tick — not backfilled from campaign start.
-    ok('newly saved campaign starts with no simulated delivery', c.rows.length === 0);
+    // Simulated delivery follows the FLIGHT, not when the campaign was added to
+    // the portal. The KCB campaign's flight (2026-08) is already in the past,
+    // so saving it immediately populates simulated delivery for the whole
+    // elapsed flight — the report is never empty for a campaign that has been
+    // running.
+    ok('a campaign whose flight already ran is simulated on save',
+      c.rows.length === 31 && c.hasSimulated === true,
+      'rows=' + c.rows.length + ' hasSimulated=' + c.hasSimulated);
     ok('projection and delivery are separate fields', Array.isArray(c.plan) && Array.isArray(c.rows));
     ok('whole-flight targets travel with the campaign', c.targets.impressions === 28000000);
     ok('projected-to-date is computed for pacing', c.planToDate.days >= 0);
   }
 
-  // Sim tick generates simulated data from the campaign's createdAt forward.
-  // When simTick runs in the same 15-min slot as creation, dayFraction
-  // equals simStartFraction. The function still emits a row for today
-  // with the minimum 1/96 fraction (~15 min) because simTick granularity
-  // is at least one slot. So rows will always be ≥ 1 after a sim tick.
+  // A sim tick refreshes simulated delivery for in-flight campaigns up to the
+  // current moment. For a flight that has already ended it is a no-op (the
+  // rows were settled on save), so the campaign keeps its simulated delivery.
   {
     await call('admin.simTick', A);
     const kcbAfterTick = await call('data', { token: sarah.token, clientId: 'KCB' });
     const c = kcbAfterTick.campaigns[0];
-    ok('after a sim tick, campaign has simulated delivery',
+    ok('after a sim tick, campaign still has simulated delivery',
       c.hasSimulated === true && c.rows.length > 0,
       'hasSimulated=' + c.hasSimulated + ' rows=' + c.rows.length);
   }
 
-  // simStartFraction controls minute-level precision: a campaign created
-  // mid-day only simulates from that minute onward.
+  // A backdated, still-in-flight campaign (flight started days ago, added to
+  // the portal only today) must show the delivery that has already elapsed —
+  // every day from the flight start up to today, not an empty report. This is
+  // the exact scenario the portal has to handle.
+  {
+    const d = new Date();
+    const isoD = x => x.toISOString().slice(0, 10);
+    const started = new Date(d.getTime() - 5 * 86400000);   // flight began 5 days ago
+    const ends    = new Date(d.getTime() + 25 * 86400000);  // still running
+    await call('admin.saveCampaign', Object.assign({
+      clientId: 'KCB', campaignId: '41077', name: 'KCB_Backdated_InFlight',
+      billing: 'cpm', rate: 1.5, ctr: 0.0336, budget: 30000,
+      startDate: isoD(started), endDate: isoD(ends), shape: 'even',
+    }, A));
+    const kcbNow = await call('data', { token: sarah.token, clientId: 'KCB' });
+    const bc = kcbNow.campaigns.find(x => x.id === 41077);
+    // Elapsed days = the 5 full days before today plus today's partial = 6 rows.
+    ok('a backdated in-flight campaign is simulated on save',
+      bc && bc.hasSimulated === true && bc.rows.length === 6,
+      bc ? ('rows=' + bc.rows.length + ' hasSimulated=' + bc.hasSimulated) : 'missing');
+    ok('backdated simulation fills the elapsed days, not the future',
+      bc && bc.rows.length < 31, bc ? ('rows=' + bc.rows.length) : 'missing');
+    await call('admin.deleteCampaign', Object.assign({ campaignId: '41077' }, A));
+  }
+
+  // Flight-start simulation: days before the flight start are excluded from
+  // the output, and the cutoff day is the only one scaled by dayFraction.
   {
     const p = plan.buildPlan({
       budget: 30000, billing: 'cpm', rate: 1.5, ctr: 0.0336,
       startDate: '2026-08-01', endDate: '2026-08-31', shape: 'even',
     });
-    // Full flight (no simStart) — baseline for comparison.
-    const full = plan.simulateDeliveryUpto(p, { clientCode: 'TST', campaignId: '99100' }, '2026-08-01', 1);
-    // Created at 10:30 UTC on Aug 1 → simStartFraction ≈ 0.4375.
-    // The first day should only show ~56.25% of the full-day values.
-    const fromMidMorning = plan.simulateDeliveryUpto(
-      p, { clientCode: 'TST', campaignId: '99100' }, '2026-08-01', 1,
-      '2026-08-01', 0.4375
-    );
-    ok('simStartFraction reduces first-day values',
-      fromMidMorning[0].impressions < full[0].impressions,
-      fromMidMorning[0].impressions + ' < ' + full[0].impressions);
-    // The remaining fraction of day 1 should be ~56.25% of the full day.
-    const ratio = fromMidMorning[0].impressions / full[0].impressions;
-    ok('first-day ratio is roughly 1 minus simStartFraction',
-      ratio > 0.50 && ratio < 0.62,
-      'ratio = ' + ratio.toFixed(4));
-    // When simStart == asOf and dayFraction == simStartFraction on the
-    // same day, the minimum fraction (1/96) is used so that a freshly-created
-    // campaign still produces a row after its first tick.
-    const minSlice = plan.simulateDeliveryUpto(
-      p, { clientCode: 'TST', campaignId: '99100' }, '2026-08-01', 0.4375,
-      '2026-08-01', 0.4375
-    );
-    ok('same-day same-slot tick produces 1 row with minimum fraction',
-      minSlice.length === 1, 'length=' + minSlice.length);
-    // The values should be tiny (~1/96 of a full day's output).
-    ok('minimum-fraction row has small impressions',
-      minSlice[0].impressions > 0 && minSlice[0].impressions < full[0].impressions,
-      minSlice[0].impressions + ' < ' + full[0].impressions);
+    // Whole elapsed flight up to Aug 10, full final day.
+    const toTen = plan.simulateDeliveryUpto(p, { clientCode: 'TST', campaignId: '99100' }, '2026-08-10', 1);
+    ok('simulation up to a mid-flight date covers start..cutoff',
+      toTen.length === 10 && toTen[0].date === '2026-08-01' && toTen[9].date === '2026-08-10',
+      'len=' + toTen.length);
+    // The cutoff day scaled to half shows a smaller final day than the full day.
+    const toTenHalf = plan.simulateDeliveryUpto(p, { clientCode: 'TST', campaignId: '99100' }, '2026-08-10', 0.5);
+    ok('the cutoff day is scaled by dayFraction',
+      toTenHalf[9].impressions < toTen[9].impressions,
+      toTenHalf[9].impressions + ' < ' + toTen[9].impressions);
+    // When the cutoff is AFTER the flight ends, every day is complete — the
+    // fraction must not shrink the last flight day.
+    const past = plan.simulateDeliveryUpto(p, { clientCode: 'TST', campaignId: '99100' }, '2026-09-30', 0.5);
+    const pastFull = plan.simulateDeliveryUpto(p, { clientCode: 'TST', campaignId: '99100' }, '2026-09-30', 1);
+    ok('an ended flight ignores dayFraction (last day stays full)',
+      past.length === 31 && past[30].impressions === pastFull[30].impressions,
+      'len=' + past.length);
   }
 
   // Also verify that a FUTURE campaign starts with no simulated delivery.
