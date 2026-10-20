@@ -308,16 +308,28 @@ async function saveCampaign(store, req) {
   //
   //   • Flight already started  → fills every elapsed day, today scaled by the
   //                               current time-of-day fraction.
-  //   • Flight starts today     → shows just today's partial (accumulates).
+  //   • Flight starts today      → starts at 0 and accumulates from the moment
+  //                                it is created (startFraction excludes the
+  //                                part of today that elapsed before creation).
   //   • Flight starts in future → nothing yet (simulateDeliveryUpto returns []).
   await store.deleteActualsByCampaignAndSource(campaignId, 'simulated');
 
   const now = new Date();
+  // A campaign whose flight starts on the very day it is created must begin at
+  // 0 and grow from its creation moment — not snap to the current time-of-day
+  // partial. We exclude the fraction of today that elapsed before creation.
+  // A backdated flight (started on an earlier calendar day) passes 0, so its
+  // first day is counted in full.
+  const startFraction = (iso(now) === iso(req.startDate))
+    ? dayFractionFromTime(now)
+    : 0;
   const simRows = simulateDeliveryUpto(
     plan,
     { clientCode, campaignId },
     iso(now),
     dayFractionFromTime(now),
+    null,
+    startFraction,
   );
   if (simRows.length) await store.upsertActuals(simRows);
 
@@ -384,11 +396,24 @@ async function simTick(store, req) {
     // that has already happened. Past days are deterministic (same PRNG,
     // dayFraction=1) and upsert on the compound key campaignId+date, so
     // re-running a tick never duplicates or disturbs settled days.
+    //
+    // A campaign whose flight starts on the very day it was created begins at
+    // 0 and accumulates from its creation moment: startFraction excludes the
+    // part of that first day that elapsed before the campaign existed. A
+    // backdated flight (started on an earlier calendar day) passes 0, so its
+    // first day counts in full.
+    const created = c.createdAt ? new Date(c.createdAt) : null;
+    const startFraction = (created && !isNaN(created.getTime())
+      && iso(created) === iso(c.startDate))
+      ? dayFractionFromTime(created)
+      : 0;
     const simRows = simulateDeliveryUpto(
       plan,
       { clientCode: c.clientCode, campaignId: c.campaignId },
       today,
       frac,
+      null,
+      startFraction,
     );
     if (simRows.length) {
       await store.upsertActuals(simRows);
