@@ -302,10 +302,19 @@ function simulateDelivery(plan, meta) {
  *   Null (the default) includes the whole flight from its start date, which
  *   is what the portal uses so a campaign's simulated delivery follows the
  *   flight itself rather than when it was entered into the dashboard.
+ * @param {number} [startFraction=0] - Fraction (0–1) of the FIRST included
+ *   day that elapsed BEFORE the campaign actually began, and is therefore
+ *   excluded. Used so a campaign whose flight starts on the same day it is
+ *   created begins at 0 and only counts delivery from the creation moment
+ *   onward (e.g. created at 10:00 UTC → startFraction ≈ 0.4167, so that first
+ *   day counts only the remaining ~58%). A backdated campaign whose flight
+ *   started on an earlier calendar day passes 0 here — its first day is a
+ *   full day of delivery.
  * @returns {Array} Actuals-compatible rows with source='simulated'.
  */
-function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart) {
+function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart, startFraction) {
   dayFraction = dayFraction != null ? dayFraction : 1;
+  startFraction = startFraction > 0 ? Math.min(startFraction, 1) : 0;
 
   const { rows, targets } = plan;
   if (!rows || !rows.length) return [];
@@ -365,10 +374,24 @@ function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart) {
   if (startIdx < 0 || startIdx >= nDays) return [];
 
   // --- Phase 2: rescale the PARTIAL slice (days startIdx..nDays-1) ------------
-  // Calculate plan totals — the last day is scaled by dayFraction if < 1.
+  // countedFrac(i) = how much of flight day `i` actually counts:
+  //   • the LAST day (the cutoff/today) is scaled by dayFraction when partial;
+  //   • the FIRST included day drops startFraction — the part of that day that
+  //     elapsed before the campaign began (so a same-day campaign starts at 0
+  //     and grows from its creation moment).
+  // When the first day IS also the last day, both apply: the counted slice of
+  // today is (dayFraction − startFraction), which is exactly 0 at creation.
+  const countedFrac = (i) => {
+    let f = 1;
+    if (i === nDays - 1 && dayFraction > 0 && dayFraction < 1) f = dayFraction;
+    if (i === startIdx && startFraction > 0) f = Math.max(0, f - startFraction);
+    return f;
+  };
+
+  // Calculate plan totals using each day's counted fraction.
   const planTotalsPartial = { spend: 0, impressions: 0, clicks: 0, downloads: 0 };
   for (let i = startIdx; i < nDays; i++) {
-    const frac = (i === nDays - 1 && dayFraction > 0 && dayFraction < 1) ? dayFraction : 1;
+    const frac = countedFrac(i);
     planTotalsPartial.spend += rows[i].spend * frac;
     planTotalsPartial.impressions += rows[i].impressions * frac;
     planTotalsPartial.clicks += rows[i].clicks * frac;
@@ -385,20 +408,20 @@ function simulateDeliveryUpto(plan, meta, asOf, dayFraction, simStart) {
     downloads:   planTotalsPartial.downloads * overDelivery,
   };
 
-  // Build the slice, scaling the last day's noisy values by dayFraction.
-  const sliceLen = nDays - startIdx;
+  // Build the slice, scaling each day's noisy values by its counted fraction.
   const slice = noisyFull.slice(startIdx, nDays).map((r, i) => {
-    if (i === sliceLen - 1 && dayFraction > 0 && dayFraction < 1) {
-      return {
-        date: r.date,
-        spend: r.spend * dayFraction,
-        impressions: r.impressions * dayFraction,
-        clicks: r.clicks * dayFraction,
-        downloads: r.downloads * dayFraction,
-      };
+    const frac = countedFrac(startIdx + i);
+    if (frac === 1) {
+      return { date: r.date, spend: r.spend, impressions: r.impressions,
+               clicks: r.clicks, downloads: r.downloads };
     }
-    return { date: r.date, spend: r.spend, impressions: r.impressions,
-             clicks: r.clicks, downloads: r.downloads };
+    return {
+      date: r.date,
+      spend: r.spend * frac,
+      impressions: r.impressions * frac,
+      clicks: r.clicks * frac,
+      downloads: r.downloads * frac,
+    };
   });
 
   // Build cumulative sums for the noisy partial slice.
