@@ -394,6 +394,59 @@ async function throws(label, fn, match) {
       JSON.stringify(stripMeta(simExplicit1)) === JSON.stringify(stripMeta(simFull)));
   }
 
+  /* ── startFraction: a flight that starts the day it is created begins at 0 ─ */
+  {
+    const meta = { clientCode: 'KCB', campaignId: '41041' };
+    // A 10-day flight 2026-08-01 .. 2026-08-10.
+    const p = plan.buildPlan({ budget: 3000, billing: 'cpm', rate: 1.5, ctr: 0.03,
+      startDate: '2026-08-01', endDate: '2026-08-10' });
+
+    const cumSpend = (arr) => arr.reduce((s, r) => s + r.spend, 0);
+
+    // CASE A — created today, flight starts today. asOf is the first flight day,
+    // dayFraction and startFraction are both the SAME moment → the counted slice
+    // of today is (dayFraction − startFraction) = 0, so delivery starts at 0.
+    const atCreation = plan.simulateDeliveryUpto(
+      p, meta, '2026-08-01', /*dayFraction*/0.5, /*simStart*/null, /*startFraction*/0.5);
+    ok('start-today at creation moment → no rows (starts at 0)',
+      atCreation.length === 0 || cumSpend(atCreation) < 1e-9,
+      cumSpend(atCreation).toFixed(6));
+
+    // CASE B — created earlier in the day, now a bit later the same day. The
+    // counted slice is (0.75 − 0.25) = 0.5 of one day → small but positive.
+    const laterSameDay = plan.simulateDeliveryUpto(
+      p, meta, '2026-08-01', 0.75, null, 0.25);
+    const oneDayFull = plan.simulateDeliveryUpto(p, meta, '2026-08-01', 1);
+    ok('start-today later in the day → small positive delivery',
+      cumSpend(laterSameDay) > 0 && cumSpend(laterSameDay) < cumSpend(oneDayFull),
+      'later $' + cumSpend(laterSameDay).toFixed(2) + ' < full-day $' + cumSpend(oneDayFull).toFixed(2));
+    ok('start-today half-day counted ≈ 50% of a full first day',
+      Math.abs(cumSpend(laterSameDay) / cumSpend(oneDayFull) - 0.5) < 0.05,
+      (cumSpend(laterSameDay) / cumSpend(oneDayFull)).toFixed(4));
+
+    // CASE C — the first day stays partial FOREVER. Even after the flight has
+    // run several more days, the first day keeps its excluded startFraction
+    // (it is never retroactively back-filled to a full day).
+    const day3Start = plan.simulateDeliveryUpto(
+      p, meta, '2026-08-03', 1, null, 0.5);
+    const day3Full = plan.simulateDeliveryUpto(p, meta, '2026-08-03', 1);
+    ok('start-today first day stays partial as the flight progresses',
+      cumSpend(day3Start) < cumSpend(day3Full),
+      'partial-start $' + cumSpend(day3Start).toFixed(2) + ' < full $' + cumSpend(day3Full).toFixed(2));
+    // The excluded amount is ~half of the first plan day relative to the full run.
+    ok('start-today first-day exclusion persists (≈ half a day short)',
+      day3Start.length === day3Full.length,
+      day3Start.length + ' rows');
+
+    // CASE D — a BACKDATED flight (started on an earlier calendar day) passes
+    // startFraction 0 → its first day is counted in full, same as the default.
+    const backdated = plan.simulateDeliveryUpto(p, meta, '2026-08-03', 1, null, 0);
+    const stripData = (arr) => arr.map(r => ({ date: r.date, spend: r.spend,
+      impressions: r.impressions, clicks: r.clicks, downloads: r.downloads }));
+    ok('backdated flight (startFraction=0) equals the default full first day',
+      JSON.stringify(stripData(backdated)) === JSON.stringify(stripData(day3Full)));
+  }
+
   /* ── tick status ─────────────────────────────────────────────────────── */
   {
     const tickRes = await call('admin.tickStatus', A);
